@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Lavanya Shop",
+    "slug": "lavanya-shop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6C3FC5"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lavanya.shop"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6C3FC5"
+      },
+      "package": "com.lavanya.shop"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

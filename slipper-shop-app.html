@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slipper Shop — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#EEE7D9;
+    --surface:#FBF7EF;
+    --surface-2:#F3ECDD;
+    --ink:#2E241B;
+    --ink-soft:#6E5F4F;
+    --leather:#6B3F2A;
+    --leather-dark:#4A2B1B;
+    --tan:#C98A45;
+    --olive:#4C6B4A;
+    --line:#DCD0B8;
+    --danger:#A6412F;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --radius-sm:9px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Work Sans', sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px 14px 60px;
+  }
+  .phone{
+    width:100%;
+    max-width:400px;
+    background:var(--surface);
+    border-radius:30px;
+    border:1px solid #D9CBAE;
+    box-shadow:0 30px 60px -30px rgba(74,43,27,0.35), 0 2px 0 rgba(255,255,255,0.6) inset;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:760px;
+  }
+  header.top{
+    padding:22px 22px 16px;
+    background:linear-gradient(180deg, var(--leather-dark), var(--leather) 130%);
+    color:#F4E9DA;
+    position:relative;
+  }
+  header.top input.shopname{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.5rem;
+    background:none;
+    border:none;
+    color:#F4E9DA;
+    width:100%;
+    padding:0;
+  }
+  header.top input.shopname::placeholder{color:#D8BFA3;}
+  header.top .date{
+    font-size:0.78rem;
+    color:#DCC1A2;
+    margin-top:4px;
+  }
+  .tabs{
+    display:flex;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--line);
+  }
+  .tab{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    text-align:center;
+    padding:12px 4px;
+    font-size:0.74rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+    user-select:none;
+  }
+  .tab svg{
+    width:16px;
+    height:16px;
+    flex-shrink:0;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.6;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .tab.active{
+    color:var(--leather);
+    border-bottom-color:var(--tan);
+  }
+  main{
+    flex:1;
+    overflow-y:auto;
+    padding:18px 18px 24px;
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-family:'Fraunces', serif;
+    font-size:1.05rem;
+    font-weight:600;
+    margin-bottom:12px;
+    color:var(--leather-dark);
+  }
+  .field{margin-bottom:11px;}
+  .field label{
+    display:block;
+    font-size:0.74rem;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+    font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+    font-family:'Work Sans', sans-serif;
+    font-size:0.92rem;
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus{
+    outline:none;
+    border-color:var(--tan);
+    background:#fff;
+  }
+  .row2{display:flex; gap:10px;}
+  .row2 .field{flex:1;}
+  .row3{display:flex; gap:10px;}
+  .row3 .field{flex:1;}
+
+  button.primary{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:var(--radius-sm);
+    background:var(--leather);
+    color:#F8EEDF;
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:0.92rem;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  button.primary:hover{background:var(--leather-dark);}
+  button.primary:disabled{background:#B9AC97; cursor:not-allowed;}
+
+  button.ghost{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:transparent;
+    color:var(--ink-soft);
+    font-weight:600;
+    font-size:0.82rem;
+    cursor:pointer;
+  }
+  button.ghost.small{font-size:0.76rem; padding:9px 4px;}
+
+  .product-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:11px 2px;
+    border-bottom:1px solid var(--line);
+  }
+  .product-item:last-child{border-bottom:none;}
+  .product-item .pname{font-weight:600; font-size:0.92rem;}
+  .product-item .pmeta{font-size:0.75rem; color:var(--ink-soft); margin-top:2px;}
+  .stockpill{
+    font-size:0.72rem;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:999px;
+    background:var(--olive);
+    color:#EFF3E9;
+    white-space:nowrap;
+  }
+  .stockpill.low{background:var(--danger); color:#F8E7E3;}
+  .del-btn{
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:0.72rem;
+    font-weight:700;
+    cursor:pointer;
+    margin-left:10px;
+    padding:0;
+  }
+  .empty{
+    text-align:center;
+    padding:24px 10px;
+    color:var(--ink-soft);
+    font-size:0.85rem;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .stat{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius-md);
+    padding:14px;
+  }
+  .stat .label{font-size:0.72rem; color:var(--ink-soft); font-weight:600;}
+  .stat .value{
+    font-family:'Fraunces', serif;
+    font-size:1.5rem;
+    font-weight:600;
+    color:var(--leather-dark);
+    margin-top:4px;
+  }
+  .stat.profit .value{color:var(--olive);}
+  .stat.small .value{font-size:1.15rem;}
+
+  .sale-row{
+    display:flex;
+    justify-content:space-between;
+    padding:9px 2px;
+    border-bottom:1px solid var(--line);
+    font-size:0.82rem;
+  }
+  .sale-row:last-child{border-bottom:none;}
+  .sale-row .sname{font-weight:600;}
+  .sale-row .stime{color:var(--ink-soft); font-size:0.72rem;}
+  .sale-row .samt{font-weight:700; color:var(--olive);}
+
+  .rline{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.82rem;
+    margin-bottom:5px;
+  }
+
+  .filter-actions{display:flex; gap:8px; margin-top:2px;}
+  .filter-actions button{flex:1;}
+
+  /* Receipt */
+  #receiptOverlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(46,36,27,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  #receiptOverlay.show{display:flex;}
+  .receipt-card{
+    background:#fff;
+    width:100%;
+    max-width:300px;
+    border-radius:6px;
+    padding:22px 20px;
+    font-family:'Work Sans', monospace;
+    color:#2B2B2B;
+    box-shadow:0 20px 50px rgba(0,0,0,0.3);
+  }
+  .receipt-card .rshop{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:1.15rem;
+    text-align:center;
+  }
+  .receipt-card .rsub{
+    text-align:center;
+    font-size:0.7rem;
+    color:#666;
+    margin-bottom:10px;
+  }
+  .receipt-dash{
+    border-top:1px dashed #999;
+    margin:10px 0;
+  }
+  .rtotal{
+    display:flex;
+    justify-content:space-between;
+    font-weight:700;
+    font-size:0.95rem;
+    margin-top:6px;
+  }
+  .rfoot{
+    text-align:center;
+    font-size:0.72rem;
+    color:#777;
+    margin-top:12px;
+  }
+  .receipt-actions{
+    display:flex;
+    gap:6px;
+    margin-top:16px;
+  }
+  .receipt-actions button{flex:1; font-size:0.76rem; padding:10px 4px;}
+
+  ::-webkit-scrollbar{width:0;height:0;}
+
+  @media print{
+    body *{visibility:hidden;}
+    #receiptOverlay, #receiptOverlay *{visibility:visible;}
+    #receiptOverlay{position:absolute; inset:0; background:#fff; padding:0;}
+    .receipt-actions{display:none;}
+    .receipt-card{box-shadow:none; max-width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <header class="top">
+    <input class="shopname" id="shopNameInput" placeholder="Your shop name" value="Lakshmi Slipper Mart">
+    <div class="date" id="todayDate"></div>
+  </header>
+
+  <nav class="tabs">
+    <div class="tab active" data-view="products">
+      <svg viewBox="0 0 24 24"><path d="M3 15c0-3 2-5 5-5h5c3 0 5 2 6 5l1 3.5a1.5 1.5 0 0 1-1.5 2H4.5A1.5 1.5 0 0 1 3 18.5z"/><path d="M8 10V7a3 3 0 0 1 3-3h1"/></svg>
+      Slippers
+    </div>
+    <div class="tab" data-view="sell">
+      <svg viewBox="0 0 24 24"><path d="M4 4h2l1.2 11.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H7"/><circle cx="9.5" cy="20" r="1.1"/><circle cx="17.5" cy="20" r="1.1"/></svg>
+      Sell
+    </div>
+    <div class="tab" data-view="dashboard">
+      <svg viewBox="0 0 24 24"><path d="M4 19V10"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+      Dashboard
+    </div>
+    <div class="tab" data-view="reports">
+      <svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 16.5h6"/></svg>
+      Reports
+    </div>
+  </nav>
+
+  <main>
+    <!-- PRODUCTS VIEW -->
+    <section class="view active" id="view-products">
+      <div class="card">
+        <h2>Add a slipper</h2>
+        <div class="field">
+          <label>Name / model</label>
+          <input type="text" id="pName" placeholder="e.g. Hawai">
+        </div>
+        <div class="row3">
+          <div class="field">
+            <label>Size</label>
+            <input type="text" id="pSize" placeholder="8">
+          </div>
+          <div class="field">
+            <label>Color</label>
+            <input type="text" id="pColor" placeholder="Blue">
+          </div>
+        </div>
+        <div class="field">
+          <label>Brand / category</label>
+          <input type="text" id="pBrand" placeholder="e.g. Relaxo, Hawai">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Cost price (₹)</label>
+            <input type="number" id="pCost" placeholder="120" min="0">
+          </div>
+          <div class="field">
+            <label>Selling price (₹)</label>
+            <input type="number" id="pPrice" placeholder="180" min="0">
+          </div>
+        </div>
+        <div class="field">
+          <label>Stock quantity</label>
+          <input type="number" id="pStock" placeholder="30" min="0">
+        </div>
+        <button class="primary" id="addProductBtn">Add to shop</button>
+      </div>
+
+      <div class="card">
+        <h2>Your slippers</h2>
+        <div id="productList"></div>
+      </div>
+    </section>
+
+    <!-- SELL VIEW -->
+    <section class="view" id="view-sell">
+      <div class="card">
+        <h2>Record a sale</h2>
+        <div class="field">
+          <label>Which slipper</label>
+          <select id="sellProduct"></select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" id="sellQty" min="1" value="1">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Customer name (optional)</label>
+            <input type="text" id="sellCustName" placeholder="Kumar">
+          </div>
+          <div class="field">
+            <label>Phone (optional)</label>
+            <input type="text" id="sellCustPhone" placeholder="98765 43210">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Discount (₹)</label>
+            <input type="number" id="sellDiscount" placeholder="0" min="0" value="0">
+          </div>
+          <div class="field">
+            <label>Payment mode</label>
+            <select id="sellPayMode">
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="sellPreview" style="display:none;">
+          <label>Bill total</label>
+          <input type="text" id="sellTotalDisplay" disabled>
+        </div>
+        <button class="primary" id="printSaleBtn">Generate receipt</button>
+        <p style="font-size:0.72rem; color:var(--ink-soft); margin-top:10px;">Sale confirms — and stock reduces — once you print or download the receipt.</p>
+      </div>
+
+      <div class="card">
+        <h2>Today's sales</h2>
+        <div id="todaySalesList"></div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section class="view" id="view-dashboard">
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Today's sales</div>
+          <div class="value" id="statTodayQty">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Today's revenue</div>
+          <div class="value" id="statTodayRevenue">₹0</div>
+        </div>
+        <div class="stat profit">
+          <div class="label">Today's profit</div>
+          <div class="value" id="statTodayProfit">₹0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total stock left</div>
+          <div class="value" id="statStockLeft">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>All-time profit</h2>
+        <div class="rline"><span>Total revenue</span><span id="totalRevenue">₹0</span></div>
+        <div class="rline"><span>Total profit</span><span id="totalProfit">₹0</span></div>
+        <div class="rline"><span>Pairs sold</span><span id="totalQty">0</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Recent sales</h2>
+        <div id="recentSalesList"></div>
+      </div>
+    </section>
+
+    <!-- REPORTS VIEW -->
+    <section class="view" id="view-reports">
+      <div class="card">
+        <h2>Filter sales</h2>
+        <div class="row2">
+          <div class="field">
+            <label>From date</label>
+            <input type="date" id="repFrom">
+          </div>
+          <div class="field">
+            <label>To date</label>
+            <input type="date" id="repTo">
+          </div>
+        </div>
+        <div class="field">
+          <label>Search (slipper name or customer)</label>
+          <input type="text" id="repSearch" placeholder="e.g. Hawai, Kumar">
+        </div>
+        <div class="filter-actions">
+          <button class="ghost small" id="repClearBtn">Clear filters</button>
+          <button class="primary" id="repApplyBtn" style="font-size:0.82rem;">Apply</button>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat small">
+          <div class="label">Pairs sold</div>
+          <div class="value" id="repQty">0</div>
+        </div>
+        <div class="stat small">
+          <div class="label">Revenue</div>
+          <div class="value" id="repRevenue">₹0</div>
+        </div>
+        <div class="stat small profit">
+          <div class="label">Profit</div>
+          <div class="value" id="repProfit">₹0</div>
+        </div>
+      </div>
+
+      <button class="ghost small" id="repDownloadBtn" style="width:100%; margin-bottom:14px;">Download this report (CSV)</button>
+
+      <div class="card">
+        <h2>Matching sales</h2>
+        <div id="repList"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- RECEIPT OVERLAY -->
+<div id="receiptOverlay">
+  <div class="receipt-card" id="receiptCard">
+    <div class="rshop" id="rShopName">Shop Name</div>
+    <div class="rsub" id="rDateTime"></div>
+    <div class="rsub" id="rCustomerLine" style="display:none;"></div>
+    <div class="receipt-dash"></div>
+    <div class="rline"><span id="rItemName">Item</span><span id="rItemQty">x1</span></div>
+    <div class="rline"><span>Price / pair</span><span id="rItemPrice">₹0</span></div>
+    <div class="rline" id="rDiscountLine" style="display:none;"><span>Discount</span><span id="rDiscountAmt">₹0</span></div>
+    <div class="rline"><span>Payment mode</span><span id="rPayMode">Cash</span></div>
+    <div class="receipt-dash"></div>
+    <div class="rtotal"><span>Total</span><span id="rTotalAmt">₹0</span></div>
+    <div class="rfoot">Thank you, visit again</div>
+    <div class="receipt-actions">
+      <button class="ghost" id="closeReceiptBtn">Close</button>
+      <button class="primary" id="downloadPdfBtn">Download PDF</button>
+      <button class="primary" id="doPrintBtn">Print</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- state (in-memory; resets on reload — connect a real database to persist) ----------
+  let products = [];
+  let sales = [];
+  let nextProductId = 1;
+  let currentReceipt = null; // { product, qty, discount, payMode, custName, custPhone, confirmed }
+
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:0});
+
+  $('todayDate').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+
+  function isToday(ts){
+    const d = new Date(ts), n = new Date();
+    return d.toDateString() === n.toDateString();
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      $('view-' + tab.dataset.view).classList.add('active');
+      if(tab.dataset.view === 'dashboard') renderDashboard();
+      if(tab.dataset.view === 'sell') renderSellOptions();
+      if(tab.dataset.view === 'reports') renderReports();
+    });
+  });
+
+  // ---------- products ----------
+  $('addProductBtn').addEventListener('click', () => {
+    const name = $('pName').value.trim();
+    const size = $('pSize').value.trim();
+    const color = $('pColor').value.trim();
+    const brand = $('pBrand').value.trim();
+    const cost = parseFloat($('pCost').value);
+    const price = parseFloat($('pPrice').value);
+    const stock = parseInt($('pStock').value);
+
+    if(!name || isNaN(cost) || isNaN(price) || isNaN(stock)){
+      alert('Fill in at least the name, cost price, selling price and stock quantity.');
+      return;
+    }
+    products.push({ id: nextProductId++, name, size, color, brand, cost, price, stock });
+    $('pName').value = ''; $('pSize').value = ''; $('pColor').value = ''; $('pBrand').value = '';
+    $('pCost').value = ''; $('pPrice').value = ''; $('pStock').value = '';
+    renderProducts();
+    renderSellOptions();
+  });
+
+  function productLabel(p){
+    const bits = [];
+    if(p.size) bits.push('Size ' + p.size);
+    if(p.color) bits.push(p.color);
+    return bits.length ? `${p.name} (${bits.join(', ')})` : p.name;
+  }
+
+  function renderProducts(){
+    const list = $('productList');
+    if(products.length === 0){
+      list.innerHTML = '<div class="empty">No slippers added yet. Add your first one above.</div>';
+      return;
+    }
+    list.innerHTML = products.map(p => `
+      <div class="product-item">
+        <div>
+          <div class="pname">${escapeHtml(productLabel(p))}</div>
+          <div class="pmeta">${p.brand ? escapeHtml(p.brand) + ' · ' : ''}Cost ${money(p.cost)} · Sells for ${money(p.price)}</div>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <span class="stockpill ${p.stock <= 5 ? 'low' : ''}">${p.stock} left</span>
+          <button class="del-btn" onclick="deleteProduct(${p.id})">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function deleteProduct(id){
+    products = products.filter(p => p.id !== id);
+    renderProducts();
+    renderSellOptions();
+  }
+
+  // ---------- sell ----------
+  function renderSellOptions(){
+    const sel = $('sellProduct');
+    if(products.length === 0){
+      sel.innerHTML = '<option value="">Add a slipper first</option>';
+      $('printSaleBtn').disabled = true;
+      $('sellPreview').style.display = 'none';
+      renderTodaySales();
+      return;
+    }
+    $('printSaleBtn').disabled = false;
+    sel.innerHTML = products.map(p => `<option value="${p.id}">${escapeHtml(productLabel(p))} — ${p.stock} left</option>`).join('');
+    updateSellPreview();
+    renderTodaySales();
+  }
+
+  function currentBillTotal(){
+    const pid = parseInt($('sellProduct').value);
+    const qty = parseInt($('sellQty').value) || 0;
+    const discount = parseFloat($('sellDiscount').value) || 0;
+    const p = products.find(x => x.id === pid);
+    if(!p || qty <= 0) return null;
+    return { p, qty, discount, total: Math.max(0, p.price * qty - discount) };
+  }
+
+  function updateSellPreview(){
+    const r = currentBillTotal();
+    if(!r){
+      $('sellPreview').style.display = 'none';
+      return;
+    }
+    $('sellPreview').style.display = 'block';
+    $('sellTotalDisplay').value = money(r.total);
+  }
+
+  ['sellProduct','sellQty','sellDiscount'].forEach(id => $(id).addEventListener('input', updateSellPreview));
+  $('sellProduct').addEventListener('change', updateSellPreview);
+
+  $('printSaleBtn').addEventListener('click', () => {
+    const r = currentBillTotal();
+    if(!r){ alert('Choose a slipper and a valid quantity.'); return; }
+    if(r.qty > r.p.stock){ alert(`Only ${r.p.stock} pairs left in stock.`); return; }
+
+    currentReceipt = {
+      product: r.p,
+      qty: r.qty,
+      discount: r.discount,
+      payMode: $('sellPayMode').value,
+      custName: $('sellCustName').value.trim(),
+      custPhone: $('sellCustPhone').value.trim(),
+      confirmed: false
+    };
+    openReceipt(currentReceipt);
+  });
+
+  function openReceipt(r){
+    const total = Math.max(0, r.product.price * r.qty - r.discount);
+    $('rShopName').textContent = $('shopNameInput').value.trim() || 'Slipper Shop';
+    $('rDateTime').textContent = new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' });
+
+    if(r.custName || r.custPhone){
+      $('rCustomerLine').style.display = 'block';
+      $('rCustomerLine').textContent = [r.custName, r.custPhone].filter(Boolean).join(' · ');
+    } else {
+      $('rCustomerLine').style.display = 'none';
+    }
+
+    $('rItemName').textContent = productLabel(r.product);
+    $('rItemQty').textContent = 'x' + r.qty;
+    $('rItemPrice').textContent = money(r.product.price);
+
+    if(r.discount > 0){
+      $('rDiscountLine').style.display = 'flex';
+      $('rDiscountAmt').textContent = '-' + money(r.discount);
+    } else {
+      $('rDiscountLine').style.display = 'none';
+    }
+
+    $('rPayMode').textContent = r.payMode;
+    $('rTotalAmt').textContent = money(total);
+    $('receiptOverlay').classList.add('show');
+  }
+
+  $('closeReceiptBtn').addEventListener('click', () => {
+    $('receiptOverlay').classList.remove('show');
+    currentReceipt = null;
+    resetSellForm();
+  });
+
+  function finalizeSaleIfNeeded(){
+    if(!currentReceipt || currentReceipt.confirmed) return;
+    const { product, qty, discount, payMode, custName, custPhone } = currentReceipt;
+
+    product.stock -= qty;
+    const revenue = Math.max(0, product.price * qty - discount);
+    const profit = (product.price - product.cost) * qty - discount;
+
+    sales.push({
+      id: Date.now(),
+      productName: productLabel(product),
+      qty,
+      pricePerUnit: product.price,
+      costPerUnit: product.cost,
+      discount,
+      payMode,
+      custName,
+      custPhone,
+      revenue,
+      profit,
+      time: Date.now()
+    });
+
+    currentReceipt.confirmed = true;
+    renderProducts();
+    renderSellOptions();
+    renderDashboard();
+  }
+
+  $('doPrintBtn').addEventListener('click', () => {
+    if(!currentReceipt) return;
+    finalizeSaleIfNeeded();
+    window.print();
+  });
+
+  $('downloadPdfBtn').addEventListener('click', async () => {
+    if(!currentReceipt) return;
+    finalizeSaleIfNeeded();
+    const node = $('receiptCard');
+    const actions = node.querySelector('.receipt-actions');
+    actions.style.display = 'none';
+    try{
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'pt', format: [canvas.width / 2, canvas.height / 2] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`receipt-${Date.now()}.pdf`);
+    } finally {
+      actions.style.display = 'flex';
+    }
+  });
+
+  function resetSellForm(){
+    $('sellQty').value = 1;
+    $('sellCustName').value = '';
+    $('sellCustPhone').value = '';
+    $('sellDiscount').value = 0;
+    $('sellPayMode').value = 'Cash';
+    updateSellPreview();
+  }
+
+  function renderTodaySales(){
+    const list = $('todaySalesList');
+    const todays = sales.filter(s => isToday(s.time)).slice().reverse();
+    if(todays.length === 0){
+      list.innerHTML = '<div class="empty">No sales recorded today yet.</div>';
+      return;
+    }
+    list.innerHTML = todays.map(s => `
+      <div class="sale-row">
+        <div>
+          <div class="sname">${escapeHtml(s.productName)} × ${s.qty}</div>
+          <div class="stime">${new Date(s.time).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}${s.custName ? ' · ' + escapeHtml(s.custName) : ''}</div>
+        </div>
+        <div class="samt">${money(s.revenue)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- dashboard ----------
+  function renderDashboard(){
+    const todays = sales.filter(s => isToday(s.time));
+    const todayQty = todays.reduce((a,s) => a + s.qty, 0);
+    const todayRevenue = todays.reduce((a,s) => a + s.revenue, 0);
+    const todayProfit = todays.reduce((a,s) => a + s.profit, 0);
+    const stockLeft = products.reduce((a,p) => a + p.stock, 0);
+
+    $('statTodayQty').textContent = todayQty;
+    $('statTodayRevenue').textContent = money(todayRevenue);
+    $('statTodayProfit').textContent = money(todayProfit);
+    $('statStockLeft').textContent = stockLeft;
+
+    const totalRevenue = sales.reduce((a,s) => a + s.revenue, 0);
+    const totalProfit = sales.reduce((a,s) => a + s.profit, 0);
+    const totalQty = sales.reduce((a,s) => a + s.qty, 0);
+    $('totalRevenue').textContent = money(totalRevenue);
+    $('totalProfit').textContent = money(totalProfit);
+    $('totalQty').textContent = totalQty;
+
+    const recent = sales.slice().reverse().slice(0, 8);
+    const list = $('recentSalesList');
+    if(recent.length === 0){
+      list.innerHTML = '<div class="empty">No sales recorded yet.</div>';
+      return;
+    }
+    list.innerHTML = recent.map(s => `
+      <div class="sale-row">
+        <div>
+          <div class="sname">${escapeHtml(s.productName)} × ${s.qty}</div>
+          <div class="stime">${new Date(s.time).toLocaleDateString('en-IN', {day:'numeric', month:'short'})}, ${new Date(s.time).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</div>
+        </div>
+        <div class="samt">${money(s.profit)} profit</div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- reports ----------
+  let lastFilteredSales = [];
+
+  $('repApplyBtn').addEventListener('click', renderReports);
+  $('repClearBtn').addEventListener('click', () => {
+    $('repFrom').value = '';
+    $('repTo').value = '';
+    $('repSearch').value = '';
+    renderReports();
+  });
+
+  function renderReports(){
+    const fromVal = $('repFrom').value;
+    const toVal = $('repTo').value;
+    const search = $('repSearch').value.trim().toLowerCase();
+
+    const fromTs = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : null;
+    const toTs = toVal ? new Date(toVal + 'T23:59:59').getTime() : null;
+
+    const filtered = sales.filter(s => {
+      if(fromTs !== null && s.time < fromTs) return false;
+      if(toTs !== null && s.time > toTs) return false;
+      if(search){
+        const hay = (s.productName + ' ' + (s.custName || '')).toLowerCase();
+        if(!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
+    lastFilteredSales = filtered;
+
+    const qty = filtered.reduce((a,s) => a + s.qty, 0);
+    const revenue = filtered.reduce((a,s) => a + s.revenue, 0);
+    const profit = filtered.reduce((a,s) => a + s.profit, 0);
+
+    $('repQty').textContent = qty;
+    $('repRevenue').textContent = money(revenue);
+    $('repProfit').textContent = money(profit);
+
+    const list = $('repList');
+    if(filtered.length === 0){
+      list.innerHTML = '<div class="empty">No sales match this filter.</div>';
+      return;
+    }
+    list.innerHTML = filtered.slice().reverse().map(s => `
+      <div class="sale-row">
+        <div>
+          <div class="sname">${escapeHtml(s.productName)} × ${s.qty}</div>
+          <div class="stime">${new Date(s.time).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}, ${new Date(s.time).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}${s.custName ? ' · ' + escapeHtml(s.custName) : ''} · ${s.payMode}</div>
+        </div>
+        <div class="samt">${money(s.revenue)}</div>
+      </div>
+    `).join('');
+  }
+
+  $('repDownloadBtn').addEventListener('click', () => {
+    if(lastFilteredSales.length === 0){
+      alert('No sales in this filter to download.');
+      return;
+    }
+    const headers = ['Date','Time','Slipper','Qty','Price per pair','Discount','Payment mode','Customer name','Customer phone','Revenue','Profit'];
+    const rows = lastFilteredSales.map(s => {
+      const d = new Date(s.time);
+      return [
+        d.toLocaleDateString('en-IN'),
+        d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}),
+        s.productName,
+        s.qty,
+        s.pricePerUnit,
+        s.discount,
+        s.payMode,
+        s.custName || '',
+        s.custPhone || '',
+        s.revenue,
+        s.profit
+      ];
+    });
+    const csvEscape = (v) => `"${String(v).replace(/"/g,'""')}"`;
+    const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales-report-${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // init
+  renderProducts();
+  renderSellOptions();
+  renderDashboard();
+  renderReports();
+</script>
+
+</body>
+</html>
