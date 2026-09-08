@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Image, Platform,
+  TouchableOpacity, Alert, Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { createProduct, updateProduct } from '../services/api';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
 
-const CATEGORIES = ['Perfumes'];
+const CATEGORIES = ['Slippers', 'Perfumes'];
 
 function Field({ label, required, error, hint, children }) {
   return (
@@ -34,33 +34,32 @@ export default function AddProductScreen() {
   const editProd   = route.params?.product ?? null;
   const isEdit     = !!editProd;
 
-  const [loading,       setLoading]      = useState(false);
-  const [errors,        setErrors]       = useState({});
+  const [loading,       setLoading]       = useState(false);
+  const [errors,        setErrors]        = useState({});
+  const [category,      setCategory]      = useState('Slippers');
+  const [name,          setName]          = useState('');
+  const [brand,         setBrand]         = useState('');
+  const [sizeVol,       setSizeVol]       = useState('');
+  const [barcode,       setBarcode]       = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [mrp,           setMrp]           = useState('');
+  const [msp,           setMsp]           = useState('');
+  const [sell,          setSell]          = useState('');
+  const [stock,         setStock]         = useState('');
+  const [threshold,     setThreshold]     = useState('5');
+  const [imageUrl,      setImageUrl]      = useState('');
 
-  // Form fields
-  const [name,          setName]         = useState('');
-  const [category,      setCategory]     = useState('Perfumes');
-  const [brand,         setBrand]        = useState('');
-  const [sizeVol,       setSizeVol]      = useState('');
-  const [barcode,       setBarcode]      = useState('');
-  const [purchasePrice, setPurchasePrice]= useState('');
-  const [mrp,           setMrp]          = useState('');
-  const [msp,           setMsp]          = useState('');
-  const [sell,          setSell]         = useState('');
-  const [stock,         setStock]        = useState('');
-  const [threshold,     setThreshold]    = useState('5');
-  const [imageUrl,      setImageUrl]     = useState('');
-
+  // Pre-fill on edit
   useEffect(() => {
     if (editProd) {
+      setCategory(editProd.category || 'Slippers');
       setName(editProd.name || '');
-      setCategory(editProd.category || 'Perfumes');
       setBrand(editProd.brand || '');
       setSizeVol(editProd.size_or_volume || '');
       setBarcode(editProd.barcode || '');
       setPurchasePrice(String(editProd.purchase_price || editProd.cost_price || ''));
-      setMrp(String(editProd.mrp || ''));
-      setMsp(String(editProd.msp || ''));
+      setMrp(editProd.mrp ? String(editProd.mrp) : '');
+      setMsp(editProd.msp ? String(editProd.msp) : '');
       setSell(String(editProd.selling_price || ''));
       setStock(String(editProd.stock_quantity ?? ''));
       setThreshold(String(editProd.low_stock_threshold ?? '5'));
@@ -70,11 +69,11 @@ export default function AddProductScreen() {
 
   const validate = () => {
     const e = {};
-    if (!name.trim())                                             e.name = 'Product name is required';
+    if (!name.trim())                                                    e.name = 'Product name is required';
     if (!purchasePrice || isNaN(+purchasePrice) || +purchasePrice <= 0) e.purchasePrice = 'Enter a valid purchase price';
-    if (!sell || isNaN(+sell) || +sell <= 0)                     e.sell = 'Enter a valid selling price';
-    if (msp && +sell < +msp)                                     e.sell = `Selling price must be ≥ MSP (₹${msp})`;
-    if (!stock || isNaN(+stock) || parseInt(stock) < 0)          e.stock = 'Enter valid stock quantity (0 or more)';
+    if (!sell || isNaN(+sell) || +sell <= 0)                            e.sell = 'Enter a valid selling price';
+    if (msp && +sell < +msp)                                            e.sell = `Selling price must be ≥ MSP (₹${msp})`;
+    if (!stock || isNaN(+stock) || parseInt(stock, 10) < 0)             e.stock = 'Enter valid stock quantity (0 or more)';
     return e;
   };
 
@@ -85,23 +84,28 @@ export default function AddProductScreen() {
     setLoading(true);
     try {
       const payload = {
-        name: name.trim(),
+        name:               name.trim(),
         category,
-        brand: brand.trim() || undefined,
-        size_or_volume: sizeVol.trim() || undefined,
-        barcode: barcode.trim() || undefined,
-        purchase_price: parseFloat(purchasePrice),
-        cost_price: parseFloat(purchasePrice), // keep backward compat
-        mrp: mrp ? parseFloat(mrp) : undefined,
-        msp: msp ? parseFloat(msp) : undefined,
-        selling_price: parseFloat(sell),
-        stock_quantity: parseInt(stock, 10),
-        low_stock_threshold: parseInt(threshold, 10) || 5,
-        image_url: imageUrl.trim() || undefined,
+        brand:              brand.trim()   || undefined,
+        size_or_volume:     sizeVol.trim() || undefined,
+        barcode:            barcode.trim() || undefined,
+        purchase_price:     parseFloat(purchasePrice),
+        cost_price:         parseFloat(purchasePrice),
+        mrp:                mrp  ? parseFloat(mrp)  : undefined,
+        msp:                msp  ? parseFloat(msp)  : undefined,
+        selling_price:      parseFloat(sell),
+        stock_quantity:     parseInt(stock, 10),
+        low_stock_threshold:parseInt(threshold, 10) || 5,
+        image_url:          imageUrl.trim() || undefined,
       };
-      if (isEdit) await updateProduct(editProd.id, payload);
-      else        await createProduct(payload);
-      Alert.alert('Success', `Product ${isEdit ? 'updated' : 'added'} successfully!`);
+
+      if (isEdit) {
+        await updateProduct(editProd.id, payload);
+        Alert.alert('Updated!', `"${name}" updated successfully.`);
+      } else {
+        await createProduct(payload);
+        Alert.alert('Added!', `"${name}" added to inventory.`);
+      }
       navigation.goBack();
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -110,7 +114,6 @@ export default function AddProductScreen() {
     }
   };
 
-  // Live margin calc
   const margin = (+sell && +purchasePrice && +sell > 0 && +purchasePrice > 0)
     ? { val: (+sell - +purchasePrice).toFixed(2), pct: ((+sell - +purchasePrice) / +purchasePrice * 100).toFixed(1) }
     : null;
@@ -126,8 +129,11 @@ export default function AddProductScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-
+      <ScrollView
+        contentContainerStyle={styles.form}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* ── Category ── */}
         <Field label="Category" required>
           <View style={styles.catRow}>
@@ -137,14 +143,14 @@ export default function AddProductScreen() {
                 style={[styles.catChip, category === cat && styles.catChipOn]}
                 onPress={() => setCategory(cat)}
               >
-                <Text style={styles.catEmoji}>{cat === 'Perfumes' ? '🌸' : '📦'}</Text>
+                <Text style={styles.catEmoji}>{cat === 'Slippers' ? '👡' : '🌸'}</Text>
                 <Text style={[styles.catTxt, category === cat && styles.catTxtOn]}>{cat}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </Field>
 
-        {/* ── Product Name ── */}
+        {/* ── Name ── */}
         <Field label="Product / Item Name" required error={errors.name}>
           <TextInput
             style={[styles.input, errors.name && styles.inputErr]}
@@ -156,36 +162,41 @@ export default function AddProductScreen() {
 
         {/* ── Brand ── */}
         <Field label="Brand (optional)">
-          <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="e.g. VKC, Relaxo" placeholderTextColor={Colors.textMuted} />
+          <TextInput
+            style={styles.input} value={brand} onChangeText={setBrand}
+            placeholder="e.g. VKC, Relaxo" placeholderTextColor={Colors.textMuted}
+          />
         </Field>
 
         {/* ── Size / Volume ── */}
-        <Field label={category === 'Perfumes' ? 'Volume (optional)' : 'Size (optional)'}>
-          <TextInput style={styles.input} value={sizeVol} onChangeText={setSizeVol} placeholder={category === 'Perfumes' ? 'e.g. 50ml, 100ml' : 'e.g. 6, 7, 8'} placeholderTextColor={Colors.textMuted} />
+        <Field label={category === 'Slippers' ? 'Size (optional)' : 'Volume (optional)'}>
+          <TextInput
+            style={styles.input} value={sizeVol} onChangeText={setSizeVol}
+            placeholder={category === 'Slippers' ? 'e.g. 6, 7, 8' : 'e.g. 50ml, 100ml'}
+            placeholderTextColor={Colors.textMuted}
+          />
         </Field>
 
         {/* ── Barcode ── */}
-        <Field label="Barcode / QR Code (optional)" hint="Scan or type the product barcode">
+        <Field label="Barcode (optional)" hint="Scan or type product barcode">
           <View style={styles.barcodeRow}>
             <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={barcode} onChangeText={setBarcode}
-              placeholder="e.g. 8901234567890"
-              placeholderTextColor={Colors.textMuted}
-              keyboardType="default"
+              style={[styles.input, { flex: 1 }]} value={barcode} onChangeText={setBarcode}
+              placeholder="e.g. 8901234567890" placeholderTextColor={Colors.textMuted}
+              autoCorrect={false}
             />
             <TouchableOpacity
               style={styles.scanBtn}
-              onPress={() => Alert.alert('Barcode Scanner', 'Use Expo Go on a physical device to enable camera scanning.')}
+              onPress={() => Alert.alert('Scanner', 'Use Expo Go on a physical device to scan barcodes.')}
             >
               <Ionicons name="barcode-outline" size={20} color={Colors.white} />
             </TouchableOpacity>
           </View>
         </Field>
 
-        {/* ── Prices section ── */}
+        {/* ── Pricing section ── */}
         <View style={styles.sectionHeader}>
-          <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
+          <Ionicons name="pricetag-outline" size={15} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Pricing</Text>
         </View>
 
@@ -205,8 +216,7 @@ export default function AddProductScreen() {
           <View style={{ flex: 1 }}>
             <Field label="MRP (₹)" hint="Max retail price">
               <TextInput
-                style={styles.input}
-                value={mrp} onChangeText={setMrp}
+                style={styles.input} value={mrp} onChangeText={setMrp}
                 keyboardType="decimal-pad" placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
               />
@@ -219,8 +229,7 @@ export default function AddProductScreen() {
           <View style={{ flex: 1 }}>
             <Field label="MSP (₹)" hint="Min selling price">
               <TextInput
-                style={styles.input}
-                value={msp} onChangeText={setMsp}
+                style={styles.input} value={msp} onChangeText={setMsp}
                 keyboardType="decimal-pad" placeholder="0.00"
                 placeholderTextColor={Colors.textMuted}
               />
@@ -242,18 +251,18 @@ export default function AddProductScreen() {
         {/* Margin preview */}
         {margin && (
           <View style={styles.marginBox}>
-            <Ionicons name="analytics-outline" size={16} color={Colors.primary} />
+            <Ionicons name="analytics-outline" size={15} color={Colors.primary} />
             <Text style={styles.marginTxt}>
               Margin: <Text style={{ color: Colors.success, fontWeight: '700' }}>₹{margin.val} ({margin.pct}%)</Text>
+              {msp ? <Text style={{ color: Colors.warning }}>  MSP: ₹{msp}</Text> : null}
+              {mrp ? <Text style={{ color: Colors.info }}>  MRP: ₹{mrp}</Text> : null}
             </Text>
-            {msp ? <Text style={styles.marginTxt}>MSP: <Text style={{ fontWeight: '700', color: Colors.warning }}>₹{msp}</Text></Text> : null}
-            {mrp ? <Text style={styles.marginTxt}>MRP: <Text style={{ fontWeight: '700', color: Colors.info }}>₹{mrp}</Text></Text> : null}
           </View>
         )}
 
-        {/* ── Stock ── */}
+        {/* ── Stock section ── */}
         <View style={styles.sectionHeader}>
-          <Ionicons name="cube-outline" size={16} color={Colors.primary} />
+          <Ionicons name="cube-outline" size={15} color={Colors.primary} />
           <Text style={styles.sectionTitle}>Stock</Text>
         </View>
 
@@ -272,8 +281,7 @@ export default function AddProductScreen() {
           <View style={{ flex: 1 }}>
             <Field label="Low Stock Alert at">
               <TextInput
-                style={styles.input}
-                value={threshold} onChangeText={setThreshold}
+                style={styles.input} value={threshold} onChangeText={setThreshold}
                 keyboardType="number-pad" placeholder="5"
                 placeholderTextColor={Colors.textMuted}
               />
@@ -284,8 +292,7 @@ export default function AddProductScreen() {
         {/* ── Image URL ── */}
         <Field label="Image URL (optional)">
           <TextInput
-            style={styles.input}
-            value={imageUrl} onChangeText={setImageUrl}
+            style={styles.input} value={imageUrl} onChangeText={setImageUrl}
             placeholder="https://example.com/image.jpg"
             placeholderTextColor={Colors.textMuted}
             autoCapitalize="none"
@@ -296,7 +303,8 @@ export default function AddProductScreen() {
         {/* ── Save button ── */}
         <TouchableOpacity
           style={[styles.saveBtn, loading && { opacity: 0.6 }]}
-          onPress={handleSave} disabled={loading}
+          onPress={handleSave}
+          disabled={loading}
         >
           <Ionicons name={isEdit ? 'save-outline' : 'add-circle-outline'} size={20} color={Colors.white} />
           <Text style={styles.saveTxt}>{loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Product'}</Text>
@@ -314,10 +322,9 @@ const styles = StyleSheet.create({
   backBtn:     { width: 36, height: 36, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', color: Colors.white, fontSize: FontSize.lg, fontWeight: '700' },
 
-  form:    { padding: Spacing.lg },
-  twoCol:  { flexDirection: 'row' },
-
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md, marginTop: Spacing.xs },
+  form:          { padding: Spacing.lg },
+  twoCol:        { flexDirection: 'row' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm, marginTop: Spacing.xs, paddingBottom: Spacing.xs, borderBottomWidth: 1, borderBottomColor: Colors.border },
   sectionTitle:  { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
 
   catRow:    { flexDirection: 'row', gap: Spacing.md },
@@ -327,17 +334,16 @@ const styles = StyleSheet.create({
   catTxt:    { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textSecondary },
   catTxtOn:  { color: Colors.primary },
 
-  input:     { backgroundColor: Colors.card, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: FontSize.md, color: Colors.text, outlineStyle: 'none' },
-  inputErr:  { borderColor: Colors.danger },
-
+  input:      { backgroundColor: Colors.card, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: FontSize.md, color: Colors.text, outlineStyle: 'none' },
+  inputErr:   { borderColor: Colors.danger },
   barcodeRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
   scanBtn:    { width: 46, height: 46, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
 
-  marginBox: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.lg },
-  marginTxt: { fontSize: FontSize.sm, color: Colors.text },
+  marginBox:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.lg },
+  marginTxt:  { fontSize: FontSize.sm, color: Colors.text, flex: 1 },
 
   imgPreview: { width: 80, height: 80, borderRadius: Radius.md, marginTop: Spacing.sm },
 
-  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: Colors.primary, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing.sm },
-  saveTxt: { color: Colors.white, fontSize: FontSize.lg, fontWeight: '700' },
+  saveBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: Colors.primary, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing.sm },
+  saveTxt:    { color: Colors.white, fontSize: FontSize.lg, fontWeight: '700' },
 });
