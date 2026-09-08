@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // ── Change this to your machine's LAN IP when testing on a physical device ──
-// e.g. 'http://192.168.1.100:3000'
+// e.g. 'http://192.168.1.100:4000'
 const BASE_URL = 'http://localhost:4000';
 
 const api = axios.create({
@@ -22,46 +22,22 @@ api.interceptors.response.use(
   }
 );
 
-// ────────────────────────────────────────────────────────────────────────────
-// PRODUCTS
-// ────────────────────────────────────────────────────────────────────────────
-export const getProducts = (params = {}) =>
-  api.get('/products', { params });
+// ── PRODUCTS ─────────────────────────────────────────────────────────────────
+export const getProducts   = (params = {}) => api.get('/products', { params });
+export const createProduct = (data)        => api.post('/products', data);
+export const updateProduct = (id, data)    => api.put(`/products/${id}`, data);
+export const deleteProduct = (id)          => api.delete(`/products/${id}`);
 
-export const createProduct = (data) =>
-  api.post('/products', data);
+// ── SALES ────────────────────────────────────────────────────────────────────
+export const completeSale = (data)        => api.post('/sales', data);
+export const getSales     = (params = {}) => api.get('/sales', { params });
 
-export const updateProduct = (id, data) =>
-  api.put(`/products/${id}`, data);
+// ── REPORTS ──────────────────────────────────────────────────────────────────
+export const getReportSummary = (params = {}) => api.get('/reports/summary', { params });
 
-export const deleteProduct = (id) =>
-  api.delete(`/products/${id}`);
-
-// ────────────────────────────────────────────────────────────────────────────
-// SALES
-// ────────────────────────────────────────────────────────────────────────────
-export const completeSale = (data) =>
-  api.post('/sales', data);
-
-export const getSales = (params = {}) =>
-  api.get('/sales', { params });
-
-// ────────────────────────────────────────────────────────────────────────────
-// REPORTS
-// ────────────────────────────────────────────────────────────────────────────
-export const getReportSummary = (params = {}) =>
-  api.get('/reports/summary', { params });
-
-// ────────────────────────────────────────────────────────────────────────────
-// EXPENSES
-// ────────────────────────────────────────────────────────────────────────────
-export const createExpense = (data) =>
-  api.post('/expenses', data);
-
-export const getExpenses = (params = {}) =>
-  api.get('/expenses', { params });
-
-export const deleteExpense = (id) =>
-  api.delete(`/expenses/${id}`);
+// ── EXPENSES ─────────────────────────────────────────────────────────────────
+export const createExpense = (data)        => api.post('/expenses', data);
+export const getExpenses   = (params = {}) => api.get('/expenses', { params });
+export const deleteExpense = (id)          => api.delete(`/expenses/${id}`);
 
 export default api;
