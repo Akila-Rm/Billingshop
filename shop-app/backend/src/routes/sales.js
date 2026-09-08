@@ -36,7 +36,10 @@ router.post('/', async (req, res, next) => {
     // ── Lock & fetch product rows ─────────────────────────────────────────────
     const productIds = items.map((i) => i.product_id);
     const { rows: products } = await client.query(
-      'SELECT id, name, selling_price, cost_price, stock_quantity FROM products WHERE id = ANY($1) FOR UPDATE',
+      `SELECT id, name, selling_price,
+              COALESCE(purchase_price, cost_price) AS cost_price,
+              stock_quantity
+       FROM products WHERE id = ANY($1) FOR UPDATE`,
       [productIds]
     );
 

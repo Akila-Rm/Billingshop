@@ -18,7 +18,7 @@ export default function ProductsScreen() {
   const load = useCallback(async () => {
     try {
       const params = {};
-      if (search.trim())    params.search   = search.trim();
+      if (search.trim())      params.search   = search.trim();
       if (category !== 'All') params.category = category;
       setProducts(await getProducts(params));
     } catch (e) { Alert.alert('Error', e.message); }
@@ -37,29 +37,58 @@ export default function ProductsScreen() {
 
   const renderItem = ({ item }) => {
     const isLow = item.stock_quantity <= item.low_stock_threshold;
+    const purchaseP = item.purchase_price || item.cost_price;
     return (
       <View style={[styles.card, Shadow.small]}>
         <View style={[styles.emoji, { backgroundColor: item.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-          <Text style={{ fontSize: 28 }}>{item.category === 'Slippers' ? '👡' : '🌸'}</Text>
+          <Text style={{ fontSize: 26 }}>{item.category === 'Slippers' ? '👡' : '🌸'}</Text>
         </View>
+
         <View style={styles.details}>
+          {/* Name + category tag */}
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
             <View style={[styles.catTag, { backgroundColor: item.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-              <Text style={[styles.catTagTxt, { color: item.category === 'Slippers' ? Colors.primary : Colors.perfumes }]}>{item.category}</Text>
+              <Text style={[styles.catTagTxt, { color: item.category === 'Slippers' ? Colors.primary : Colors.perfumes }]}>
+                {item.category}
+              </Text>
             </View>
           </View>
-          {item.brand        ? <Text style={styles.meta}>{item.brand}</Text> : null}
-          {item.size_or_volume ? <Text style={styles.meta}>Size/Vol: {item.size_or_volume}</Text> : null}
+
+          {/* Brand / size */}
+          {item.brand         ? <Text style={styles.meta}>{item.brand}</Text> : null}
+          {item.size_or_volume? <Text style={styles.meta}>Size/Vol: {item.size_or_volume}</Text> : null}
+
+          {/* Barcode */}
+          {item.barcode ? (
+            <View style={styles.barcodeRow}>
+              <Ionicons name="barcode-outline" size={11} color={Colors.textMuted} />
+              <Text style={styles.barcodeTxt}>{item.barcode}</Text>
+            </View>
+          ) : null}
+
+          {/* Prices */}
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{fmt(item.selling_price)}</Text>
-            <Text style={styles.cost}>Cost: {fmt(item.cost_price)}</Text>
+            <Text style={styles.sellPrice}>{fmt(item.selling_price)}</Text>
+            <Text style={styles.purchasePrice}>Purchase: {fmt(purchaseP)}</Text>
           </View>
+
+          {/* MRP / MSP */}
+          <View style={styles.priceRow2}>
+            {item.mrp ? <Text style={styles.mrpTxt}>MRP: {fmt(item.mrp)}</Text> : null}
+            {item.msp ? <Text style={styles.mspTxt}>MSP: {fmt(item.msp)}</Text> : null}
+          </View>
+
+          {/* Stock badge */}
           <View style={[styles.stockBadge, isLow ? styles.stockLow : styles.stockOk]}>
             <Ionicons name={isLow ? 'warning-outline' : 'checkmark-circle-outline'} size={11} color={isLow ? Colors.warning : Colors.success} />
-            <Text style={[styles.stockTxt, { color: isLow ? Colors.warning : Colors.success }]}>{item.stock_quantity} in stock{isLow ? ' — LOW' : ''}</Text>
+            <Text style={[styles.stockTxt, { color: isLow ? Colors.warning : Colors.success }]}>
+              {item.stock_quantity} in stock{isLow ? ' — LOW' : ''}
+            </Text>
           </View>
         </View>
+
+        {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actBtn} onPress={() => navigation.navigate('AddProduct', { product: item })}>
             <Ionicons name="create-outline" size={18} color={Colors.primary} />
@@ -77,11 +106,8 @@ export default function ProductsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Products</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AddProduct', { product: null })}
-        >
-          <Ionicons name="add" size={22} color={Colors.white} />
+        <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddProduct', { product: null })}>
+          <Ionicons name="add" size={20} color={Colors.primary} />
           <Text style={styles.addBtnTxt}>Add Product</Text>
         </TouchableOpacity>
       </View>
@@ -92,10 +118,9 @@ export default function ProductsScreen() {
           <Ionicons name="search-outline" size={16} color={Colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name or brand…"
+            placeholder="Search by name, brand or barcode…"
             placeholderTextColor={Colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
+            value={search} onChangeText={setSearch}
             onSubmitEditing={load}
           />
           {search.length > 0 && (
@@ -127,7 +152,7 @@ export default function ProductsScreen() {
           <View style={styles.empty}>
             <Ionicons name="cube-outline" size={56} color={Colors.border} />
             <Text style={styles.emptyTitle}>No products found</Text>
-            <Text style={styles.emptySub}>Tap "Add Product" above to get started</Text>
+            <Text style={styles.emptySub}>Tap "Add Product" to get started</Text>
           </View>
         }
       />
@@ -138,26 +163,13 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
 
-  header: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-  },
+  header: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
   headerTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '800' },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-  },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.white, borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   addBtnTxt: { color: Colors.primary, fontWeight: '700', fontSize: FontSize.sm },
 
   searchRow: { padding: Spacing.lg, paddingBottom: Spacing.sm },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.card, borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md, height: 44,
-  },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.card, borderRadius: Radius.lg, paddingHorizontal: Spacing.md, height: 44 },
   searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.text, outlineStyle: 'none' },
 
   chips: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm, gap: Spacing.sm },
@@ -169,28 +181,28 @@ const styles = StyleSheet.create({
 
   list: { paddingHorizontal: Spacing.lg, paddingBottom: 32 },
 
-  card: {
-    flexDirection: 'row', backgroundColor: Colors.card,
-    borderRadius: Radius.lg, marginBottom: Spacing.md, overflow: 'hidden',
-  },
-  emoji:   { width: 72, alignItems: 'center', justifyContent: 'center' },
+  card: { flexDirection: 'row', backgroundColor: Colors.card, borderRadius: Radius.lg, marginBottom: Spacing.md, overflow: 'hidden' },
+  emoji: { width: 70, alignItems: 'center', justifyContent: 'center', minHeight: 90 },
   details: { flex: 1, padding: Spacing.md },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
   name:    { fontSize: FontSize.md, fontWeight: '700', color: Colors.text, flex: 1 },
   catTag:  { borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 2 },
-  catTagTxt:{ fontSize: FontSize.xs, fontWeight: '700' },
+  catTagTxt: { fontSize: FontSize.xs, fontWeight: '700' },
   meta:    { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 1 },
-  priceRow:{ flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm, marginTop: 4 },
-  price:   { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
-  cost:    { fontSize: FontSize.xs, color: Colors.textMuted },
+  barcodeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  barcodeTxt: { fontSize: FontSize.xs, color: Colors.textMuted, fontFamily: 'monospace' },
+  priceRow:  { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm, marginTop: 4 },
+  priceRow2: { flexDirection: 'row', gap: Spacing.sm, marginTop: 2 },
+  sellPrice: { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
+  purchasePrice: { fontSize: FontSize.xs, color: Colors.textMuted },
+  mrpTxt: { fontSize: FontSize.xs, color: Colors.info, fontWeight: '600' },
+  mspTxt: { fontSize: FontSize.xs, color: Colors.warning, fontWeight: '600' },
   stockBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: Radius.full, paddingHorizontal: 6, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 5 },
   stockOk:    { backgroundColor: Colors.successLight },
   stockLow:   { backgroundColor: Colors.warningLight },
   stockTxt:   { fontSize: FontSize.xs, fontWeight: '600' },
-
   actions: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.sm, gap: Spacing.sm },
   actBtn:  { width: 34, height: 34, borderRadius: Radius.full, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-
   empty:      { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { fontSize: FontSize.lg, fontWeight: '600', color: Colors.textSecondary, marginTop: Spacing.md },
   emptySub:   { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: Spacing.sm, textAlign: 'center' },
