@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getProducts, deleteProduct } from '../services/api';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
 
-const CATS = ['All', 'Slippers', 'Perfumes'];
+const CATS = ['All', 'Perfumes'];
 const fmt  = (n) => '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
 export default function ProductsScreen() {
@@ -44,16 +44,16 @@ export default function ProductsScreen() {
         onPress={() => navigation.navigate('ProductDetail', { product: item })}
         activeOpacity={0.85}
       >
-        <View style={[styles.emoji, { backgroundColor: item.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-          <Text style={{ fontSize: 26 }}>{item.category === 'Slippers' ? '👡' : '🌸'}</Text>
+        <View style={[styles.emoji, { backgroundColor: item.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
+          <Text style={{ fontSize: 26 }}>{item.category === 'Perfumes' ? '🌸' : '📦'}</Text>
         </View>
 
         <View style={styles.details}>
           {/* Name + category tag */}
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-            <View style={[styles.catTag, { backgroundColor: item.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-              <Text style={[styles.catTagTxt, { color: item.category === 'Slippers' ? Colors.primary : Colors.perfumes }]}>
+            <View style={[styles.catTag, { backgroundColor: item.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
+              <Text style={[styles.catTagTxt, { color: item.category === 'Perfumes' ? Colors.perfumes : Colors.primary }]}>
                 {item.category}
               </Text>
             </View>

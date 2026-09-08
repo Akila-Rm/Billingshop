@@ -49,8 +49,8 @@ router.post('/', async (req, res, next) => {
       err.status = 400; throw err;
     }
 
-    if (!['Slippers', 'Perfumes'].includes(category)) {
-      const err = new Error("category must be 'Slippers' or 'Perfumes'");
+    if (!['Perfumes'].includes(category)) {
+      const err = new Error("category must be 'Perfumes'");
       err.status = 400; throw err;
     }
 
@@ -99,8 +99,8 @@ router.put('/:id', async (req, res, next) => {
       err.status = 400; throw err;
     }
 
-    if (!['Slippers', 'Perfumes'].includes(category)) {
-      const err = new Error("category must be 'Slippers' or 'Perfumes'");
+    if (!['Perfumes'].includes(category)) {
+      const err = new Error("category must be 'Perfumes'");
       err.status = 400; throw err;
     }
 

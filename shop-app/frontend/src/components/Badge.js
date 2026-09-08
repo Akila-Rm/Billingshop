@@ -9,7 +9,6 @@ export default function Badge({ label, variant = 'primary', size = 'sm' }) {
     warning: Colors.warningLight,
     danger: Colors.dangerLight,
     info: Colors.infoLight,
-    slippers: '#EDE7F6',
     perfumes: '#FCE4EC',
   }[variant] || Colors.primaryLight;
 
@@ -19,7 +18,6 @@ export default function Badge({ label, variant = 'primary', size = 'sm' }) {
     warning: Colors.warning,
     danger: Colors.danger,
     info: Colors.info,
-    slippers: Colors.slippers,
     perfumes: Colors.perfumes,
   }[variant] || Colors.primary;
 

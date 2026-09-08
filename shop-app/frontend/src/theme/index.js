@@ -1,41 +1,55 @@
 import { Platform } from 'react-native';
 
 export const Colors = {
-  primary: '#6C3FC5',
-  primaryLight: '#EDE7F6',
-  secondary: '#F4A261',
-  success: '#2E7D32',
-  successLight: '#E8F5E9',
-  warning: '#F57C00',
-  warningLight: '#FFF3E0',
-  danger: '#C62828',
-  dangerLight: '#FFEBEE',
-  info: '#0277BD',
-  infoLight: '#E1F5FE',
-  background: '#F7F6FB',
-  card: '#FFFFFF',
-  border: '#E0E0E0',
-  text: '#1A1A2E',
-  textSecondary: '#6B6B8A',
-  textMuted: '#9E9E9E',
+  bg: '#EEE7D9',
+  surface: '#FBF7EF',
+  surface2: '#F3ECDD',
+  ink: '#2E241B',
+  inkSoft: '#6E5F4F',
+  leather: '#6B3F2A',
+  leatherDark: '#4A2B1B',
+  tan: '#C98A45',
+  olive: '#4C6B4A',
+  line: '#DCD0B8',
+  danger: '#A6412F',
   white: '#FFFFFF',
-  slippers: '#6C3FC5',
-  perfumes: '#E91E8C',
+  
+  // Mapping existing ones to new palette where applicable
+  primary: '#6B3F2A', // leather
+  secondary: '#C98A45', // tan
+  background: '#EEE7D9',
+  card: '#FBF7EF',
+  border: '#DCD0B8',
+  text: '#2E241B',
+  textMuted: '#6E5F4F',
 };
 
 export const FontSize = {
-  xs: 11, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 30,
+  xs: 11,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 18,
+  xxl: 22,
+  xxxl: 26,
 };
 
 export const Spacing = {
-  xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
 };
 
 export const Radius = {
-  sm: 6, md: 10, lg: 14, xl: 20, full: 999,
+  sm: 9,
+  md: 14,
+  lg: 20,
+  full: 999,
 };
 
-// Web-safe shadows using boxShadow on web, elevation on native
 export const Shadow = {
   small: Platform.select({
     web: { boxShadow: '0px 1px 4px rgba(0,0,0,0.10)' },

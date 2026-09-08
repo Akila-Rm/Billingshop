@@ -81,15 +81,15 @@ export default function ProductDetailScreen() {
           {p.image_url ? (
             <Image source={{ uri: p.image_url }} style={styles.heroImage} />
           ) : (
-            <View style={[styles.heroPlaceholder, { backgroundColor: p.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-              <Text style={styles.heroEmoji}>{p.category === 'Slippers' ? '👡' : '🌸'}</Text>
+            <View style={[styles.heroPlaceholder, { backgroundColor: p.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
+              <Text style={styles.heroEmoji}>{p.category === 'Perfumes' ? '🌸' : '📦'}</Text>
             </View>
           )}
 
           {/* Category + stock badge */}
           <View style={styles.badgeRow}>
-            <View style={[styles.catBadge, { backgroundColor: p.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
-              <Text style={[styles.catBadgeTxt, { color: p.category === 'Slippers' ? Colors.primary : Colors.perfumes }]}>
+            <View style={[styles.catBadge, { backgroundColor: p.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
+              <Text style={[styles.catBadgeTxt, { color: p.category === 'Perfumes' ? Colors.perfumes : Colors.primary }]}>
                 {p.category}
               </Text>
             </View>

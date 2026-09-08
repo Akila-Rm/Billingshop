@@ -49,8 +49,8 @@ function buildReceiptHTML({ cart, subtotal, discAmt, discType, discVal, total, p
 </head>
 <body>
   <div class="center">
-    <div class="shop-name">🛍 Lavanya Shop</div>
-    <div>Slipper &amp; Perfume Store</div>
+    <div class="shop-name">🛍 BillingShop</div>
+    <div>Perfume Store</div>
     <div>${new Date().toLocaleString('en-IN')}</div>
     ${sale ? `<div>Receipt #${sale.id}</div>` : ''}
   </div>
@@ -310,7 +310,7 @@ export default function SellScreen() {
                 <View style={styles.dropLeft}>
                   <Text style={styles.dropId}>#{p.id}</Text>
                   <View>
-                    <Text style={styles.dropName}>{p.category === 'Slippers' ? '👡' : '🌸'} {p.name}</Text>
+                    <Text style={styles.dropName}>{p.category === 'Perfumes' ? '🌸' : '📦'} {p.name}</Text>
                     {p.brand ? <Text style={styles.dropMeta}>{p.brand}{p.size_or_volume ? ` · ${p.size_or_volume}` : ''}</Text> : null}
                     {p.barcode ? <Text style={styles.dropMeta}>🔍 {p.barcode}</Text> : null}
                   </View>
@@ -342,7 +342,7 @@ export default function SellScreen() {
             <Text style={styles.sec}>Cart ({cart.length} item{cart.length > 1 ? 's' : ''})</Text>
             {cart.map(item => (
               <View key={item.product_id} style={[styles.cartItem, Shadow.small]}>
-                <Text style={styles.cartEmoji}>{item.category === 'Slippers' ? '👡' : '🌸'}</Text>
+                <Text style={styles.cartEmoji}>{item.category === 'Perfumes' ? '🌸' : '📦'}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cartName} numberOfLines={1}>{item.name}</Text>
                   <Text style={styles.cartPrice}>{fmt(item.price)} each</Text>

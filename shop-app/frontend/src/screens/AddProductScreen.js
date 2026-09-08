@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createProduct, updateProduct } from '../services/api';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
 
-const CATEGORIES = ['Slippers', 'Perfumes'];
+const CATEGORIES = ['Perfumes'];
 
 function Field({ label, required, error, hint, children }) {
   return (
@@ -39,7 +39,7 @@ export default function AddProductScreen() {
 
   // Form fields
   const [name,          setName]         = useState('');
-  const [category,      setCategory]     = useState('Slippers');
+  const [category,      setCategory]     = useState('Perfumes');
   const [brand,         setBrand]        = useState('');
   const [sizeVol,       setSizeVol]      = useState('');
   const [barcode,       setBarcode]      = useState('');
@@ -54,7 +54,7 @@ export default function AddProductScreen() {
   useEffect(() => {
     if (editProd) {
       setName(editProd.name || '');
-      setCategory(editProd.category || 'Slippers');
+      setCategory(editProd.category || 'Perfumes');
       setBrand(editProd.brand || '');
       setSizeVol(editProd.size_or_volume || '');
       setBarcode(editProd.barcode || '');
@@ -137,7 +137,7 @@ export default function AddProductScreen() {
                 style={[styles.catChip, category === cat && styles.catChipOn]}
                 onPress={() => setCategory(cat)}
               >
-                <Text style={styles.catEmoji}>{cat === 'Slippers' ? '👡' : '🌸'}</Text>
+                <Text style={styles.catEmoji}>{cat === 'Perfumes' ? '🌸' : '📦'}</Text>
                 <Text style={[styles.catTxt, category === cat && styles.catTxtOn]}>{cat}</Text>
               </TouchableOpacity>
             ))}
@@ -160,8 +160,8 @@ export default function AddProductScreen() {
         </Field>
 
         {/* ── Size / Volume ── */}
-        <Field label={category === 'Slippers' ? 'Size (optional)' : 'Volume (optional)'}>
-          <TextInput style={styles.input} value={sizeVol} onChangeText={setSizeVol} placeholder={category === 'Slippers' ? 'e.g. 6, 7, 8' : 'e.g. 50ml, 100ml'} placeholderTextColor={Colors.textMuted} />
+        <Field label={category === 'Perfumes' ? 'Volume (optional)' : 'Size (optional)'}>
+          <TextInput style={styles.input} value={sizeVol} onChangeText={setSizeVol} placeholder={category === 'Perfumes' ? 'e.g. 50ml, 100ml' : 'e.g. 6, 7, 8'} placeholderTextColor={Colors.textMuted} />
         </Field>
 
         {/* ── Barcode ── */}

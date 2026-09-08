@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Lavanya Shop",
-    "slug": "lavanya-shop",
+    "name": "BillingShop",
+    "slug": "billingshop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,14 +13,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lavanya.shop"
+      "bundleIdentifier": "com.billingshop.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6C3FC5"
       },
-      "package": "com.lavanya.shop"
+      "package": "com.billingshop.app"
     },
     "plugins": [
       "expo-asset",

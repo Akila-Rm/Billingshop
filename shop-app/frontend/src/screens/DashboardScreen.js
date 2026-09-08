@@ -1,11 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Platform } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { getReportSummary, getSales, getProducts } from '../services/api';
-import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
-
-const fmt = (n) => '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+import { globalStyles } from '../theme/styles';
+import { Colors, Radius } from '../theme';
 
 function todayRange() {
   const from = new Date(); from.setHours(0, 0, 0, 0);
@@ -13,149 +11,140 @@ function todayRange() {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function StatCard({ label, value, icon, color }) {
-  return (
-    <View style={[sc.card, Shadow.small]}>
-      <View style={[sc.icon, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon} size={22} color={color} />
-      </View>
-      <Text style={sc.val} numberOfLines={1}>{value}</Text>
-      <Text style={sc.lbl}>{label}</Text>
-    </View>
-  );
-}
-const sc = StyleSheet.create({
-  card: { flex: 1, backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.md, alignItems: 'center', margin: Spacing.xs },
-  icon: { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
-  val:  { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
-  lbl:  { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
-});
-
 export default function DashboardScreen() {
-  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
-  const [summary, setSummary]     = useState(null);
-  const [recentSales, setRecent]  = useState([]);
-  const [lowStock, setLowStock]   = useState([]);
-  const [prodCount, setProdCount] = useState(0);
+  const [todaySummary, setTodaySummary] = useState(null);
+  const [allTimeSummary, setAllTimeSummary] = useState(null);
+  const [recentSales, setRecent] = useState([]);
+  const [stockLeft, setStockLeft] = useState(0);
 
-  const load = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const { from, to } = todayRange();
-      const [sum, sales, prods] = await Promise.all([
+      const [today, all, sales, prods] = await Promise.all([
         getReportSummary({ from, to }),
-        getSales({ from, to }),
+        getReportSummary({}),
+        getSales({ limit: 10 }),
         getProducts(),
       ]);
-      setSummary(sum);
+      setTodaySummary(today);
+      setAllTimeSummary(all);
       setRecent(sales.slice(0, 5));
-      setProdCount(prods.length);
-      setLowStock(prods.filter(p => p.stock_quantity <= p.low_stock_threshold));
-    } catch (e) { console.warn(e.message); }
+      const totalStock = prods.reduce((sum, p) => sum + p.stock_quantity, 0);
+      setStockLeft(totalStock);
+    } catch (e) {
+      console.log('Error loading dashboard', e);
+    }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+  const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
+
+  const money = (n) => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:0});
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.shopName}>🛍 Lavanya Shop</Text>
-          <Text style={styles.date}>{new Date().toDateString()}</Text>
+    <View style={globalStyles.container}>
+      <View style={globalStyles.header}>
+        <Text style={globalStyles.headerTitle}>Dashboard</Text>
+      </View>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+      <View style={globalStyles.statGrid}>
+        <View style={globalStyles.stat}>
+          <Text style={globalStyles.statLabel}>Today's sales</Text>
+          <Text style={globalStyles.statValue}>{todaySummary?.total_sales || 0}</Text>
+        </View>
+        <View style={globalStyles.stat}>
+          <Text style={globalStyles.statLabel}>Today's revenue</Text>
+          <Text style={globalStyles.statValue}>{money(todaySummary?.total_revenue || 0)}</Text>
+        </View>
+        <View style={globalStyles.stat}>
+          <Text style={globalStyles.statLabel}>Today's profit</Text>
+          <Text style={[globalStyles.statValue, globalStyles.statValueProfit]}>{money(todaySummary?.total_profit || 0)}</Text>
+        </View>
+        <View style={globalStyles.stat}>
+          <Text style={globalStyles.statLabel}>Total stock left</Text>
+          <Text style={globalStyles.statValue}>{stockLeft}</Text>
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.body}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.section}>Today's Overview</Text>
-        <View style={styles.row}>
-          <StatCard label="Revenue"  value={fmt(summary?.total_revenue)} icon="cash-outline"         color={Colors.success} />
-          <StatCard label="Profit"   value={fmt(summary?.total_profit)}  icon="trending-up-outline"  color={Colors.primary} />
+      <View style={globalStyles.card}>
+        <Text style={globalStyles.h2}>All-time profit</Text>
+        <View style={styles.rline}>
+          <Text style={styles.rlineText}>Total revenue</Text>
+          <Text style={styles.rlineText}>{money(allTimeSummary?.total_revenue || 0)}</Text>
         </View>
-        <View style={styles.row}>
-          <StatCard label="Sales"    value={String(summary?.total_sales ?? 0)} icon="receipt-outline" color={Colors.info} />
-          <StatCard label="Products" value={String(prodCount)}                 icon="cube-outline"    color={Colors.secondary} />
+        <View style={styles.rline}>
+          <Text style={styles.rlineText}>Total profit</Text>
+          <Text style={styles.rlineText}>{money(allTimeSummary?.total_profit || 0)}</Text>
         </View>
+        <View style={[styles.rline, { marginBottom: 0 }]}>
+          <Text style={styles.rlineText}>Pairs sold</Text>
+          <Text style={styles.rlineText}>{allTimeSummary?.total_sales || 0}</Text>
+        </View>
+      </View>
 
-        {lowStock.length > 0 && (
-          <TouchableOpacity style={styles.alert} onPress={() => navigation.navigate('Products')}>
-            <Ionicons name="warning" size={18} color={Colors.warning} />
-            <Text style={styles.alertTxt}>{lowStock.length} product{lowStock.length > 1 ? 's' : ''} running low on stock — tap to view</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.warning} />
-          </TouchableOpacity>
-        )}
-
-        {lowStock.length > 0 && (
-          <>
-            <Text style={styles.section}>Low Stock</Text>
-            {lowStock.map(p => (
-              <View key={p.id} style={[styles.lowRow, Shadow.small]}>
-                <Text style={styles.lowEmoji}>{p.category === 'Slippers' ? '👡' : '🌸'}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.lowName}>{p.name}</Text>
-                  <Text style={styles.lowMeta}>{p.brand || p.size_or_volume || p.category}</Text>
+      <View style={globalStyles.card}>
+        <Text style={globalStyles.h2}>Recent sales</Text>
+        {recentSales.length === 0 ? (
+          <Text style={globalStyles.empty}>No sales recorded yet.</Text>
+        ) : (
+          <View>
+            {recentSales.map((sale, i) => (
+              <View key={sale.id} style={[styles.saleRow, i === recentSales.length - 1 && styles.lastItem]}>
+                <View>
+                  <Text style={styles.sname}>{sale.items?.[0]?.product_name || 'Slipper'}</Text>
+                  <Text style={styles.stime}>{new Date(sale.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</Text>
                 </View>
-                <View style={styles.lowQtyWrap}>
-                  <Text style={styles.lowQty}>{p.stock_quantity}</Text>
-                  <Text style={styles.lowQtyLbl}>left</Text>
-                </View>
+                <Text style={styles.samt}>{money(sale.total_amount)}</Text>
               </View>
             ))}
-          </>
+          </View>
         )}
-
-        <Text style={styles.section}>Recent Sales</Text>
-        {recentSales.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="receipt-outline" size={36} color={Colors.border} />
-            <Text style={styles.emptyTxt}>No sales today yet</Text>
-          </View>
-        ) : recentSales.map(sale => (
-          <View key={sale.id} style={[styles.saleRow, Shadow.small]}>
-            <View>
-              <Text style={styles.saleId}>Sale #{sale.id}</Text>
-              <Text style={styles.saleTime}>{new Date(sale.sale_date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.saleAmt}>{fmt(sale.total_amount)}</Text>
-              <Text style={styles.saleMode}>{sale.payment_mode}</Text>
-            </View>
-          </View>
-        ))}
-
-        <View style={{ height: 24 }} />
+      </View>
+      <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  header: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
-  shopName: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: '800' },
-  date:     { color: 'rgba(255,255,255,0.75)', fontSize: FontSize.xs, marginTop: 2 },
-  body:     { padding: Spacing.lg },
-  row:      { flexDirection: 'row', marginHorizontal: -Spacing.xs, marginBottom: Spacing.xs },
-  section:  { fontSize: FontSize.md, fontWeight: '700', color: Colors.text, marginTop: Spacing.lg, marginBottom: Spacing.sm },
-  alert:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.warningLight, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.md },
-  alertTxt: { flex: 1, color: Colors.warning, fontWeight: '600', fontSize: FontSize.sm },
-  lowRow:   { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.sm },
-  lowEmoji: { fontSize: 24 },
-  lowName:  { fontSize: FontSize.sm, fontWeight: '700', color: Colors.text },
-  lowMeta:  { fontSize: FontSize.xs, color: Colors.textMuted },
-  lowQtyWrap: { alignItems: 'center' },
-  lowQty:   { fontSize: FontSize.xl, fontWeight: '800', color: Colors.danger },
-  lowQtyLbl:{ fontSize: FontSize.xs, color: Colors.textMuted },
-  saleRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm },
-  saleId:   { fontSize: FontSize.sm, fontWeight: '700', color: Colors.text },
-  saleTime: { fontSize: FontSize.xs, color: Colors.textMuted },
-  saleAmt:  { fontSize: FontSize.md, fontWeight: '700', color: Colors.success },
-  saleMode: { fontSize: FontSize.xs, color: Colors.textMuted },
-  empty:    { alignItems: 'center', paddingVertical: Spacing.xl },
-  emptyTxt: { color: Colors.textMuted, marginTop: Spacing.sm },
+  rline: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  rlineText: {
+    fontFamily: 'WorkSans_400Regular',
+    fontSize: 13.1,
+    color: Colors.ink,
+  },
+  saleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    paddingHorizontal: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+  },
+  lastItem: { borderBottomWidth: 0 },
+  sname: {
+    fontFamily: 'WorkSans_600SemiBold',
+    fontSize: 13.1,
+    color: Colors.ink,
+  },
+  stime: {
+    fontFamily: 'WorkSans_400Regular',
+    fontSize: 11.5,
+    color: Colors.inkSoft,
+    marginTop: 2,
+  },
+  samt: {
+    fontFamily: 'WorkSans_700Bold',
+    fontSize: 13.1,
+    color: Colors.olive,
+  },
 });
