@@ -39,7 +39,11 @@ export default function ProductsScreen() {
     const isLow = item.stock_quantity <= item.low_stock_threshold;
     const purchaseP = item.purchase_price || item.cost_price;
     return (
-      <View style={[styles.card, Shadow.small]}>
+      <TouchableOpacity
+        style={[styles.card, Shadow.small]}
+        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+        activeOpacity={0.85}
+      >
         <View style={[styles.emoji, { backgroundColor: item.category === 'Slippers' ? Colors.primaryLight : '#FCE4EC' }]}>
           <Text style={{ fontSize: 26 }}>{item.category === 'Slippers' ? '👡' : '🌸'}</Text>
         </View>
@@ -97,7 +101,7 @@ export default function ProductsScreen() {
             <Ionicons name="trash-outline" size={18} color={Colors.danger} />
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
