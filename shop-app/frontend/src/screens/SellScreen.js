@@ -73,13 +73,13 @@ export default function SellScreen() {
   const [cart,        setCart]       = useState([]);
   const [discType,    setDiscType]   = useState('percent');
   const [discVal,     setDiscVal]    = useState('');
-  const [payment,     setPayment]    = useState('Cash');   // single mode
+  const [payment,     setPayment]    = useState('Cash');   // primary mode for backend
+  const [payAmounts,  setPayAmounts] = useState({ Cash: '', UPI: '', Card: '' }); // multi
   const [loading,     setLoading]    = useState(false);
   const [success,     setSuccess]    = useState(false);
   const [lastSale,    setLastSale]   = useState(null);
   const [lastCart,    setLastCart]   = useState([]);
   const barcodeRef = useRef(null);
-
   useFocusEffect(useCallback(() => {
     getProducts().then(setAll).catch(() => {});
   }, []));
@@ -146,21 +146,35 @@ export default function SellScreen() {
   })();
   const total = Math.max(0, subtotal - discAmt);
 
+  // multi-payment totals
+  const totalPaid = PAYMENT_MODES.reduce((s, m) => s + (parseFloat(payAmounts[m]) || 0), 0);
+  const change    = Math.max(0, totalPaid - total);
+
+  // primary mode = highest paid mode (for backend)
+  const primaryMode = PAYMENT_MODES.reduce((a, b) =>
+    (parseFloat(payAmounts[a]) || 0) >= (parseFloat(payAmounts[b]) || 0) ? a : b
+  );
+
   // ── Complete sale ────────────────────────────────────────────────────────────
   const handleSale = async () => {
     if (!cart.length) { Alert.alert('Empty cart', 'Add at least one product.'); return; }
+    if (totalPaid < total - 0.01) {
+      Alert.alert('Insufficient payment', `Paid ${fmt(totalPaid)} but total is ${fmt(total)}`);
+      return;
+    }
     setLoading(true);
     try {
       const sale = await completeSale({
         items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
         discount_type:  discVal ? discType : undefined,
         discount_value: parseFloat(discVal) || 0,
-        payment_mode:   payment,
+        payment_mode:   primaryMode,
       });
       setLastSale(sale);
       setLastCart([...cart]);
       setSuccess(true);
-      setCart([]); setDiscVal(''); setPayment('Cash');
+      setCart([]); setDiscVal('');
+      setPayAmounts({ Cash: '', UPI: '', Card: '' });
       getProducts().then(setAll).catch(() => {});
     } catch (e) { Alert.alert('Sale failed', e.message); }
     finally { setLoading(false); }
@@ -306,23 +320,65 @@ export default function SellScreen() {
           />
         </View>
 
-        {/* ── Payment Mode — simple chips (Cash / UPI / Card) ── */}
+        {/* ── Payment Mode — multi select with amounts ── */}
         <Text style={styles.sec}>Payment Mode</Text>
-        <View style={styles.payRow}>
-          {PAYMENT_MODES.map(mode => (
-            <TouchableOpacity
-              key={mode}
-              style={[styles.payChip, payment === mode && styles.payChipOn]}
-              onPress={() => setPayment(mode)}
-            >
-              <Ionicons
-                name={mode === 'Cash' ? 'cash-outline' : mode === 'UPI' ? 'phone-portrait-outline' : 'card-outline'}
-                size={18}
-                color={payment === mode ? Colors.white : Colors.textSecondary}
-              />
-              <Text style={[styles.payTxt, payment === mode && styles.payTxtOn]}>{mode}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.card, Shadow.small]}>
+          {PAYMENT_MODES.map(mode => {
+            const isActive = parseFloat(payAmounts[mode] || 0) > 0;
+            return (
+              <View key={mode} style={[styles.payRow, isActive && styles.payRowActive]}>
+                {/* Mode label */}
+                <View style={styles.payModeLeft}>
+                  <Ionicons
+                    name={mode === 'Cash' ? 'cash-outline' : mode === 'UPI' ? 'phone-portrait-outline' : 'card-outline'}
+                    size={18}
+                    color={isActive ? Colors.primary : Colors.textSecondary}
+                  />
+                  <Text style={[styles.payModeTxt, isActive && { color: Colors.primary }]}>{mode}</Text>
+                </View>
+
+                {/* Amount input */}
+                <TextInput
+                  style={[styles.payInput, isActive && styles.payInputActive]}
+                  value={payAmounts[mode]}
+                  onChangeText={v => setPayAmounts(prev => ({ ...prev, [mode]: v }))}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.textMuted}
+                />
+
+                {/* Quick fill button */}
+                <TouchableOpacity
+                  style={styles.fillBtn}
+                  onPress={() => {
+                    const otherPaid = PAYMENT_MODES
+                      .filter(m => m !== mode)
+                      .reduce((s, m) => s + (parseFloat(payAmounts[m]) || 0), 0);
+                    const remaining = Math.max(0, total - otherPaid);
+                    setPayAmounts(prev => ({ ...prev, [mode]: remaining > 0 ? remaining.toFixed(2) : '' }));
+                  }}
+                >
+                  <Text style={styles.fillBtnTxt}>Full</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+
+          {/* Paid / Change row */}
+          {totalPaid > 0 && (
+            <View style={styles.paidRow}>
+              <Text style={styles.paidLbl}>Total Paid</Text>
+              <Text style={[styles.paidVal, { color: totalPaid >= total ? Colors.success : Colors.danger }]}>
+                {fmt(totalPaid)}
+              </Text>
+              {change > 0 && (
+                <>
+                  <Text style={[styles.paidLbl, { marginLeft: Spacing.lg }]}>Change</Text>
+                  <Text style={[styles.paidVal, { color: Colors.success }]}>{fmt(change)}</Text>
+                </>
+              )}
+            </View>
+          )}
         </View>
 
         {/* ── Bill summary ── */}
@@ -345,16 +401,24 @@ export default function SellScreen() {
             <Text style={styles.billTotalLbl}>Total</Text>
             <Text style={styles.billTotalVal}>{fmt(total)}</Text>
           </View>
-          <View style={styles.billRow}>
-            <Text style={styles.billLbl}>Payment</Text>
-            <View style={styles.payBadge}>
-              <Ionicons
-                name={payment === 'Cash' ? 'cash-outline' : payment === 'UPI' ? 'phone-portrait-outline' : 'card-outline'}
-                size={13} color={Colors.primary}
-              />
-              <Text style={styles.payBadgeTxt}>{payment}</Text>
+          {PAYMENT_MODES.filter(m => parseFloat(payAmounts[m] || 0) > 0).map(m => (
+            <View key={m} style={styles.billRow}>
+              <View style={styles.payBadge}>
+                <Ionicons
+                  name={m === 'Cash' ? 'cash-outline' : m === 'UPI' ? 'phone-portrait-outline' : 'card-outline'}
+                  size={13} color={Colors.primary}
+                />
+                <Text style={styles.payBadgeTxt}>{m}</Text>
+              </View>
+              <Text style={[styles.billVal, { color: Colors.success }]}>{fmt(payAmounts[m])}</Text>
             </View>
-          </View>
+          ))}
+          {change > 0 && (
+            <View style={styles.billRow}>
+              <Text style={[styles.billLbl, { color: Colors.success }]}>Change</Text>
+              <Text style={[styles.billVal, { color: Colors.success, fontWeight: '800' }]}>{fmt(change)}</Text>
+            </View>
+          )}
         </View>
 
         {/* ── Complete Sale ── */}
@@ -384,8 +448,25 @@ export default function SellScreen() {
               <>
                 <Text style={styles.modalAmt}>{fmt(lastSale.total_amount)}</Text>
                 <Text style={styles.modalSub}>
-                  Profit: {fmt(lastSale.total_profit)}  ·  {lastSale.payment_mode}
+                  Profit: {fmt(lastSale.total_profit)}
                 </Text>
+                {/* Payment breakdown */}
+                <View style={styles.modalPayBox}>
+                  {PAYMENT_MODES.filter(m => parseFloat(payAmounts[m] || 0) > 0).map(m => (
+                    <View key={m} style={styles.modalPayRow}>
+                      <Ionicons name={m === 'Cash' ? 'cash-outline' : m === 'UPI' ? 'phone-portrait-outline' : 'card-outline'} size={14} color={Colors.primary} />
+                      <Text style={styles.modalPayLbl}>{m}</Text>
+                      <Text style={styles.modalPayVal}>{fmt(payAmounts[m])}</Text>
+                    </View>
+                  ))}
+                  {change > 0 && (
+                    <View style={[styles.modalPayRow, { borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 4, paddingTop: 4 }]}>
+                      <Ionicons name="arrow-undo-outline" size={14} color={Colors.success} />
+                      <Text style={[styles.modalPayLbl, { color: Colors.success }]}>Change</Text>
+                      <Text style={[styles.modalPayVal, { color: Colors.success }]}>{fmt(change)}</Text>
+                    </View>
+                  )}
+                </View>
               </>
             )}
 
@@ -458,12 +539,18 @@ const styles = StyleSheet.create({
   typeChipTxtOn: { color: Colors.primary },
   discInput:     { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: FontSize.md, color: Colors.text, outlineStyle: 'none' },
 
-  // Payment chips — simple 3 buttons
-  payRow:     { flexDirection: 'row', gap: Spacing.sm },
-  payChip:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.card },
-  payChipOn:  { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  payTxt:     { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
-  payTxtOn:   { color: Colors.white },
+  // Payment multi-select
+  payRow:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  payRowActive: { backgroundColor: Colors.primaryLight + '55', borderRadius: Radius.md, paddingHorizontal: Spacing.xs },
+  payModeLeft:  { flexDirection: 'row', alignItems: 'center', gap: 6, width: 72 },
+  payModeTxt:   { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textSecondary },
+  payInput:     { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: FontSize.md, color: Colors.text, textAlign: 'right', outlineStyle: 'none', backgroundColor: Colors.background },
+  payInputActive:{ borderColor: Colors.primary, backgroundColor: Colors.white },
+  fillBtn:      { backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: 4 },
+  fillBtnTxt:   { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
+  paidRow:      { flexDirection: 'row', alignItems: 'center', paddingTop: Spacing.sm, marginTop: Spacing.xs, gap: 4 },
+  paidLbl:      { fontSize: FontSize.xs, color: Colors.textSecondary },
+  paidVal:      { fontSize: FontSize.sm, fontWeight: '800', marginLeft: 4 },
 
   // Bill
   bill:         { backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing.lg },
@@ -488,7 +575,10 @@ const styles = StyleSheet.create({
   successIcon: { width: 80, height: 80, borderRadius: Radius.full, backgroundColor: Colors.successLight, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
   modalTitle:  { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.text },
   modalAmt:    { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.success, marginTop: Spacing.sm },
-  modalSub:    { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: 4, marginBottom: Spacing.lg },
+  modalPayBox: { alignSelf: 'stretch', backgroundColor: Colors.background, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md },
+  modalPayRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  modalPayLbl: { flex: 1, fontSize: FontSize.sm, color: Colors.text },
+  modalPayVal: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.text },
   printRow:    { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
   printBtn:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl },
   printTxt:    { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
