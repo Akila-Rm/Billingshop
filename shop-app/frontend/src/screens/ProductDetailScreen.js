@@ -81,18 +81,12 @@ export default function ProductDetailScreen() {
           {p.image_url ? (
             <Image source={{ uri: p.image_url }} style={styles.heroImage} />
           ) : (
-            <View style={[styles.heroPlaceholder, { backgroundColor: p.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
-              <Text style={styles.heroEmoji}>{p.category === 'Perfumes' ? '🌸' : '📦'}</Text>
+            <View style={[styles.heroPlaceholder]}>
+              <Ionicons name="cube-outline" size={48} color={Colors.textSecondary} />
             </View>
           )}
 
-          {/* Category + stock badge */}
           <View style={styles.badgeRow}>
-            <View style={[styles.catBadge, { backgroundColor: p.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
-              <Text style={[styles.catBadgeTxt, { color: p.category === 'Perfumes' ? Colors.perfumes : Colors.primary }]}>
-                {p.category}
-              </Text>
-            </View>
             <View style={[styles.stockBadge, isLow ? styles.stockLow : styles.stockOk]}>
               <Ionicons name={isLow ? 'warning-outline' : 'checkmark-circle-outline'} size={12} color={isLow ? Colors.warning : Colors.success} />
               <Text style={[styles.stockTxt, { color: isLow ? Colors.warning : Colors.success }]}>

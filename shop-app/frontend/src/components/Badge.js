@@ -9,7 +9,6 @@ export default function Badge({ label, variant = 'primary', size = 'sm' }) {
     warning: Colors.warningLight,
     danger: Colors.dangerLight,
     info: Colors.infoLight,
-    perfumes: '#FCE4EC',
   }[variant] || Colors.primaryLight;
 
   const color = {
@@ -18,7 +17,6 @@ export default function Badge({ label, variant = 'primary', size = 'sm' }) {
     warning: Colors.warning,
     danger: Colors.danger,
     info: Colors.info,
-    perfumes: Colors.perfumes,
   }[variant] || Colors.primary;
 
   return (

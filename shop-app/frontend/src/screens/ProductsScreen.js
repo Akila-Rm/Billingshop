@@ -5,24 +5,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { getProducts, deleteProduct } from '../services/api';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
 
-const CATS = ['All', 'Perfumes'];
 const fmt  = (n) => '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
 export default function ProductsScreen() {
   const navigation = useNavigation();
   const [products,   setProducts]   = useState([]);
   const [search,     setSearch]     = useState('');
-  const [category,   setCategory]   = useState('All');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const params = {};
-      if (search.trim())      params.search   = search.trim();
-      if (category !== 'All') params.category = category;
+      if (search.trim()) params.search = search.trim();
       setProducts(await getProducts(params));
     } catch (e) { Alert.alert('Error', e.message); }
-  }, [search, category]);
+  }, [search]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
@@ -44,19 +41,13 @@ export default function ProductsScreen() {
         onPress={() => navigation.navigate('ProductDetail', { product: item })}
         activeOpacity={0.85}
       >
-        <View style={[styles.emoji, { backgroundColor: item.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
-          <Text style={{ fontSize: 26 }}>{item.category === 'Perfumes' ? '🌸' : '📦'}</Text>
+        <View style={[styles.emoji, { backgroundColor: '#E0F7FA' }]}>
+          <Text style={{ fontSize: 26 }}>📦</Text>
         </View>
 
         <View style={styles.details}>
-          {/* Name + category tag */}
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-            <View style={[styles.catTag, { backgroundColor: item.category === 'Perfumes' ? '#FCE4EC' : '#E0F7FA' }]}>
-              <Text style={[styles.catTagTxt, { color: item.category === 'Perfumes' ? Colors.perfumes : Colors.primary }]}>
-                {item.category}
-              </Text>
-            </View>
           </View>
 
           {/* Brand / size */}
@@ -135,13 +126,7 @@ export default function ProductsScreen() {
         </View>
       </View>
 
-      {/* Category chips */}
       <View style={styles.chips}>
-        {CATS.map(cat => (
-          <TouchableOpacity key={cat} style={[styles.chip, category === cat && styles.chipOn]} onPress={() => setCategory(cat)}>
-            <Text style={[styles.chipTxt, category === cat && styles.chipTxtOn]}>{cat}</Text>
-          </TouchableOpacity>
-        ))}
         <Text style={styles.count}>{products.length} items</Text>
       </View>
 

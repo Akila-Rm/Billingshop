@@ -34,23 +34,19 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const {
-      name, category, brand, size_or_volume,
+      name, brand, size_or_volume,
       cost_price, purchase_price, selling_price,
       mrp, msp, barcode,
       stock_quantity, low_stock_threshold, image_url,
     } = req.body;
+    const category = 'Perfumes'; // Hardcoded for DB compatibility
 
-    validate(req.body, ['name', 'category', 'selling_price', 'stock_quantity']);
+    validate(req.body, ['name', 'selling_price', 'stock_quantity']);
 
     // purchase_price OR cost_price must be provided
     const finalPurchasePrice = purchase_price ?? cost_price;
     if (!finalPurchasePrice || isNaN(parseFloat(finalPurchasePrice)) || parseFloat(finalPurchasePrice) <= 0) {
       const err = new Error('Purchase price is required and must be greater than 0');
-      err.status = 400; throw err;
-    }
-
-    if (!['Perfumes'].includes(category)) {
-      const err = new Error("category must be 'Perfumes'");
       err.status = 400; throw err;
     }
 
@@ -85,22 +81,18 @@ router.put('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
-      name, category, brand, size_or_volume,
+      name, brand, size_or_volume,
       cost_price, purchase_price, selling_price,
       mrp, msp, barcode,
       stock_quantity, low_stock_threshold, image_url,
     } = req.body;
+    const category = 'Perfumes'; // Hardcoded for DB compatibility
 
-    validate(req.body, ['name', 'category', 'selling_price', 'stock_quantity']);
+    validate(req.body, ['name', 'selling_price', 'stock_quantity']);
 
     const finalPurchasePrice = purchase_price ?? cost_price;
     if (!finalPurchasePrice || isNaN(parseFloat(finalPurchasePrice)) || parseFloat(finalPurchasePrice) <= 0) {
       const err = new Error('Purchase price is required and must be greater than 0');
-      err.status = 400; throw err;
-    }
-
-    if (!['Perfumes'].includes(category)) {
-      const err = new Error("category must be 'Perfumes'");
       err.status = 400; throw err;
     }
 
