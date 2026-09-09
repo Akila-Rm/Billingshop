@@ -1,30 +1,34 @@
 {
   "expo": {
-    "name": "BillingShop",
-    "slug": "billingshop",
+    "name": "Lavanya Shop",
+    "slug": "lavanya-shop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#6C3FC5"
     },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro",
+      "name": "Lavanya Shop",
+      "shortName": "LavanyaShop",
+      "description": "Slipper & Perfume Shop Management",
+      "themeColor": "#6C3FC5",
+      "backgroundColor": "#F7F6FB"
+    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.billingshop.app"
+      "bundleIdentifier": "com.lavanya.shop"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6C3FC5"
       },
-      "package": "com.billingshop.app"
+      "package": "com.lavanya.shop"
     },
-    "plugins": [
-      "expo-asset",
-      "expo-font"
-    ]
+    "plugins": []
   }
 }
