@@ -3,9 +3,10 @@ const express = require('express');
 const cors = require('cors');
 
 const productsRouter = require('./routes/products');
-const salesRouter = require('./routes/sales');
-const reportsRouter = require('./routes/reports');
+const salesRouter    = require('./routes/sales');
+const reportsRouter  = require('./routes/reports');
 const expensesRouter = require('./routes/expenses');
+const creditsRouter  = require('./routes/credits');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -17,9 +18,10 @@ app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/products', productsRouter);
-app.use('/sales', salesRouter);
-app.use('/reports', reportsRouter);
+app.use('/sales',    salesRouter);
+app.use('/reports',  reportsRouter);
 app.use('/expenses', expensesRouter);
+app.use('/credits',  creditsRouter);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  Alert, ScrollView, Modal, Platform,
+  Alert, ScrollView, Modal, Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getProducts, completeSale } from '../services/api';
+import { getProducts, completeSale, createCredit } from '../services/api';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../theme';
 
 const fmt = (n) => '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -20,19 +20,17 @@ function buildReceiptHTML({ cart, subtotal, discAmt, discType, discVal, total, p
       <td align="right">${fmt(i.price)}</td>
       <td align="right">${fmt(i.price * i.quantity)}</td>
     </tr>`).join('');
-
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Courier New',monospace;font-size:12px;width:80mm;padding:8px}
-  .c{text-align:center} .b{font-weight:bold}
+  .c{text-align:center}.b{font-weight:bold}
   .div{border-top:1px dashed #000;margin:6px 0}
-  table{width:100%;border-collapse:collapse} td{padding:2px 4px}
+  table{width:100%;border-collapse:collapse}td{padding:2px 4px}
   .tot td{font-weight:bold;font-size:14px;border-top:1px solid #000;padding-top:4px}
   @media print{body{width:auto}@page{margin:5mm}}
 </style></head><body>
-  <div class="c"><div class="b" style="font-size:16px">🛍 Lavanya Shop</div>
-  <div>Slipper &amp; Perfume Store</div>
+  <div class="c"><div class="b" style="font-size:16px">Shop Management</div>
   <div>${new Date().toLocaleString('en-IN')}</div>
   ${sale ? `<div>Receipt #${sale.id}</div>` : ''}</div>
   <div class="div"></div>
@@ -58,27 +56,34 @@ function printReceipt(html) {
     win.document.write(html);
     win.document.close();
     setTimeout(() => { win.print(); }, 400);
-  } else {
-    Alert.alert('Print', 'Use your device print service to print the receipt.');
   }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SellScreen() {
-  const [allProducts, setAll]        = useState([]);
-  const [query,       setQuery]      = useState('');
-  const [results,     setResults]    = useState([]);
-  const [showDrop,    setShowDrop]   = useState(false);
-  const [barcodeInput, setBarcode]   = useState('');
-  const [cart,        setCart]       = useState([]);
-  const [discType,    setDiscType]   = useState('percent');
-  const [discVal,     setDiscVal]    = useState('');
-  const [selectedModes, setSelectedModes] = useState(['Cash']); // multi-select
-  const [loading,     setLoading]    = useState(false);
-  const [success,     setSuccess]    = useState(false);
-  const [lastSale,    setLastSale]   = useState(null);
-  const [lastCart,    setLastCart]   = useState([]);
+  const [allProducts,  setAll]          = useState([]);
+  const [query,        setQuery]        = useState('');
+  const [results,      setResults]      = useState([]);
+  const [showDrop,     setShowDrop]     = useState(false);
+  const [barcodeInput, setBarcode]      = useState('');
+  const [cart,         setCart]         = useState([]);
+  const [discType,     setDiscType]     = useState('percent');
+  const [discVal,      setDiscVal]      = useState('');
+  const [selectedModes,setSelectedModes]= useState(['Cash']);
+  const [loading,      setLoading]      = useState(false);
+  const [success,      setSuccess]      = useState(false);
+  const [lastSale,     setLastSale]     = useState(null);
+  const [lastCart,     setLastCart]     = useState([]);
+
+  // Pay Later modal state
+  const [payLaterModal, setPayLaterModal] = useState(false);
+  const [custName,      setCustName]     = useState('');
+  const [custPhone,     setCustPhone]    = useState('');
+  const [custNote,      setCustNote]     = useState('');
+  const [creditLoading, setCreditLoading]= useState(false);
+
   const barcodeRef = useRef(null);
+
   useFocusEffect(useCallback(() => {
     getProducts().then(setAll).catch(() => {});
   }, []));
@@ -119,7 +124,7 @@ export default function SellScreen() {
         if (ex.quantity >= p.stock_quantity) { Alert.alert('Stock limit', `Only ${p.stock_quantity} left`); return prev; }
         return prev.map(i => i.product_id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { product_id: p.id, name: p.name, category: p.category, price: parseFloat(p.selling_price), stock: p.stock_quantity, quantity: 1, barcode: p.barcode || '' }];
+      return [...prev, { product_id: p.id, name: p.name, category: p.category, price: parseFloat(p.selling_price), stock: p.stock_quantity, quantity: 1 }];
     });
     setQuery(''); setResults([]); setShowDrop(false);
   };
@@ -135,6 +140,14 @@ export default function SellScreen() {
 
   const removeFromCart = (id) => setCart(prev => prev.filter(i => i.product_id !== id));
 
+  const toggleMode = (mode) => {
+    setSelectedModes(prev =>
+      prev.includes(mode)
+        ? prev.length > 1 ? prev.filter(m => m !== mode) : prev
+        : [...prev, mode]
+    );
+  };
+
   // ── Totals ──────────────────────────────────────────────────────────────────
   const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const discAmt = (() => {
@@ -144,18 +157,9 @@ export default function SellScreen() {
     return 0;
   })();
   const total = Math.max(0, subtotal - discAmt);
-
-  // multi-payment — no amounts, just selected modes
-  const toggleMode = (mode) => {
-    setSelectedModes(prev =>
-      prev.includes(mode)
-        ? prev.length > 1 ? prev.filter(m => m !== mode) : prev
-        : [...prev, mode]
-    );
-  };
   const primaryMode = selectedModes[0] || 'Cash';
 
-  // ── Complete sale ────────────────────────────────────────────────────────────
+  // ── Complete Sale ────────────────────────────────────────────────────────────
   const handleSale = async () => {
     if (!cart.length) { Alert.alert('Empty cart', 'Add at least one product.'); return; }
     setLoading(true);
@@ -169,23 +173,59 @@ export default function SellScreen() {
       setLastSale(sale);
       setLastCart([...cart]);
       setSuccess(true);
-      setCart([]); setDiscVal('');
-      setSelectedModes(['Cash']);
+      setCart([]); setDiscVal(''); setSelectedModes(['Cash']);
       getProducts().then(setAll).catch(() => {});
     } catch (e) { Alert.alert('Sale failed', e.message); }
     finally { setLoading(false); }
   };
 
+  // ── Pay Later ────────────────────────────────────────────────────────────────
+  const openPayLater = () => {
+    if (!cart.length) { Alert.alert('Empty cart', 'Add at least one product first.'); return; }
+    setCustName(''); setCustPhone(''); setCustNote('');
+    setPayLaterModal(true);
+  };
+
+  const handlePayLater = async () => {
+    if (!custName.trim()) { Alert.alert('Required', 'Please enter customer name.'); return; }
+    setCreditLoading(true);
+    try {
+      // First complete the sale with Cash (stock deduction)
+      const sale = await completeSale({
+        items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+        discount_type:  discVal ? discType : undefined,
+        discount_value: parseFloat(discVal) || 0,
+        payment_mode:   'Cash', // placeholder — actual payment pending
+      });
+
+      // Then create credit record
+      await createCredit({
+        customer_name: custName.trim(),
+        phone:         custPhone.trim() || undefined,
+        amount:        total,
+        note:          custNote.trim() || undefined,
+        sale_id:       sale.id,
+      });
+
+      setPayLaterModal(false);
+      setCart([]); setDiscVal(''); setSelectedModes(['Cash']);
+      getProducts().then(setAll).catch(() => {});
+      Alert.alert(
+        '✅ Saved!',
+        `Credit of ${fmt(total)} saved for ${custName.trim()}.\nYou can view it in the Credits tab.`
+      );
+    } catch (e) { Alert.alert('Error', e.message); }
+    finally { setCreditLoading(false); }
+  };
+
   const handlePrint = () => {
-    const html = buildReceiptHTML({ cart: lastCart, subtotal, discAmt, discType, discVal: discVal || '0', total, payment, sale: lastSale });
+    const html = buildReceiptHTML({ cart: lastCart, subtotal, discAmt, discType, discVal: discVal || '0', total, payment: selectedModes.join('+'), sale: lastSale });
     printReceipt(html);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <View style={styles.root}>
-
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>New Sale</Text>
         {cart.length > 0 && <View style={styles.badge}><Text style={styles.badgeTxt}>{cart.length}</Text></View>}
@@ -193,7 +233,7 @@ export default function SellScreen() {
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {/* ── Barcode scan bar ── */}
+        {/* ── Barcode ── */}
         <View style={[styles.barcodeBar, Shadow.small]}>
           <Ionicons name="barcode-outline" size={18} color={Colors.primary} />
           <TextInput
@@ -208,13 +248,13 @@ export default function SellScreen() {
             autoCorrect={false}
           />
           {barcodeInput.length > 0 && (
-            <TouchableOpacity onPress={handleBarcodeSubmit} style={styles.scanBtn}>
+            <TouchableOpacity onPress={handleBarcodeSubmit}>
               <Ionicons name="add-circle" size={24} color={Colors.primary} />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* ── Product search ── */}
+        {/* ── Search ── */}
         <Text style={styles.sec}>Add Products</Text>
         <View style={[styles.searchBox, Shadow.small]}>
           <Ionicons name="search-outline" size={16} color={Colors.textMuted} />
@@ -233,7 +273,6 @@ export default function SellScreen() {
           )}
         </View>
 
-        {/* Search dropdown */}
         {showDrop && results.length > 0 && (
           <View style={[styles.dropdown, Shadow.small]}>
             {results.map(p => (
@@ -242,7 +281,7 @@ export default function SellScreen() {
                   <Text style={styles.dropId}>#{p.id}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.dropName}>{p.category === 'Slippers' ? '👡' : '🌸'} {p.name}</Text>
-                    {p.brand ? <Text style={styles.dropMeta}>{p.brand}{p.size_or_volume ? ` · ${p.size_or_volume}` : ''}</Text> : null}
+                    {p.brand ? <Text style={styles.dropMeta}>{p.brand}</Text> : null}
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -316,7 +355,7 @@ export default function SellScreen() {
           />
         </View>
 
-        {/* ── Payment Mode — multi chip select ── */}
+        {/* ── Payment Mode ── */}
         <Text style={styles.sec}>Payment Mode</Text>
         <View style={styles.payRow}>
           {PAYMENT_MODES.map(mode => {
@@ -329,8 +368,7 @@ export default function SellScreen() {
               >
                 <Ionicons
                   name={mode === 'Cash' ? 'cash-outline' : mode === 'UPI' ? 'phone-portrait-outline' : 'card-outline'}
-                  size={18}
-                  color={on ? Colors.white : Colors.textSecondary}
+                  size={18} color={on ? Colors.white : Colors.textSecondary}
                 />
                 <Text style={[styles.payTxt, on && styles.payTxtOn]}>{mode}</Text>
               </TouchableOpacity>
@@ -338,7 +376,7 @@ export default function SellScreen() {
           })}
         </View>
 
-        {/* ── Bill summary ── */}
+        {/* ── Bill Summary ── */}
         <View style={[styles.bill, Shadow.medium]}>
           <Text style={styles.billTitle}>Bill Summary</Text>
           <View style={styles.billRow}>
@@ -371,17 +409,30 @@ export default function SellScreen() {
           </View>
         </View>
 
-        {/* ── Complete Sale ── */}
-        <TouchableOpacity
-          style={[styles.completeBtn, (!cart.length || loading) && styles.completeBtnOff]}
-          onPress={handleSale}
-          disabled={!cart.length || loading}
-        >
-          <Ionicons name="checkmark-circle-outline" size={22} color={Colors.white} />
-          <Text style={styles.completeTxt}>
-            {loading ? 'Processing…' : `Complete Sale  ${fmt(total)}`}
-          </Text>
-        </TouchableOpacity>
+        {/* ── Action Buttons ── */}
+        <View style={styles.actionBtns}>
+          {/* Pay Later */}
+          <TouchableOpacity
+            style={[styles.payLaterBtn, !cart.length && styles.btnDisabled]}
+            onPress={openPayLater}
+            disabled={!cart.length}
+          >
+            <Ionicons name="time-outline" size={18} color={'#5C2D0E'} />
+            <Text style={styles.payLaterTxt}>Pay Later</Text>
+          </TouchableOpacity>
+
+          {/* Complete Sale */}
+          <TouchableOpacity
+            style={[styles.completeBtn, (!cart.length || loading) && styles.btnDisabled]}
+            onPress={handleSale}
+            disabled={!cart.length || loading}
+          >
+            <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
+            <Text style={styles.completeTxt}>
+              {loading ? 'Processing…' : `Complete Sale  ${fmt(total)}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -398,24 +449,89 @@ export default function SellScreen() {
               <>
                 <Text style={styles.modalAmt}>{fmt(lastSale.total_amount)}</Text>
                 <Text style={styles.modalSub}>
-                  Profit: {fmt(lastSale.total_profit)}  ·  {selectedModes.join(' + ')}
+                  Profit: {fmt(lastSale.total_profit)}  ·  {lastSale.payment_mode}
                 </Text>
               </>
             )}
-
-            {/* Print buttons */}
-            <View style={styles.printRow}>
+            <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.printBtn} onPress={handlePrint}>
                 <Ionicons name="print-outline" size={16} color={Colors.white} />
                 <Text style={styles.printTxt}>Print Receipt</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setSuccess(false)}>
+                <Text style={styles.cancelTxt}>Cancel</Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.newSaleBtn} onPress={() => setSuccess(false)}>
-              <Text style={styles.newSaleTxt}>New Sale</Text>
-            </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* ── Pay Later Modal ── */}
+      <Modal transparent animationType="slide" visible={payLaterModal}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalBg}>
+            <View style={styles.payLaterBox}>
+              {/* Header */}
+              <View style={styles.payLaterHeader}>
+                <View style={styles.payLaterIconWrap}>
+                  <Ionicons name="time-outline" size={24} color={'#5C2D0E'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.payLaterTitle}>Pay Later (Credit)</Text>
+                  <Text style={styles.payLaterAmount}>Amount: {fmt(total)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setPayLaterModal(false)}>
+                  <Ionicons name="close" size={22} color={Colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Fields */}
+              <Text style={styles.fieldLbl}>Customer Name <Text style={{ color: Colors.danger }}>*</Text></Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={custName}
+                onChangeText={setCustName}
+                placeholder="e.g. Ravi Kumar"
+                placeholderTextColor={Colors.textMuted}
+              />
+
+              <Text style={styles.fieldLbl}>Phone Number (optional)</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={custPhone}
+                onChangeText={setCustPhone}
+                placeholder="e.g. 9876543210"
+                placeholderTextColor={Colors.textMuted}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.fieldLbl}>Note (optional)</Text>
+              <TextInput
+                style={[styles.fieldInput, { height: 60, textAlignVertical: 'top' }]}
+                value={custNote}
+                onChangeText={setCustNote}
+                placeholder="e.g. Will pay next week"
+                placeholderTextColor={Colors.textMuted}
+                multiline
+              />
+
+              {/* Buttons */}
+              <View style={styles.modalBtns}>
+                <TouchableOpacity
+                  style={[styles.confirmBtn, creditLoading && { opacity: 0.6 }]}
+                  onPress={handlePayLater}
+                  disabled={creditLoading}
+                >
+                  <Ionicons name="save-outline" size={18} color={Colors.white} />
+                  <Text style={styles.confirmTxt}>{creditLoading ? 'Saving…' : 'Save Credit'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setPayLaterModal(false)}>
+                  <Text style={styles.cancelTxt}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -423,7 +539,7 @@ export default function SellScreen() {
 
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.background },
-  header: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
+  header: { backgroundColor: '#5C2D0E', flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
   headerTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '800', flex: 1 },
   badge:    { backgroundColor: Colors.secondary, borderRadius: Radius.full, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   badgeTxt: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
@@ -435,7 +551,6 @@ const styles = StyleSheet.create({
   // Barcode
   barcodeBar:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.primaryLight, borderRadius: Radius.lg, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderWidth: 1.5, borderColor: Colors.primary },
   barcodeInput: { flex: 1, fontSize: FontSize.md, color: Colors.text, height: 40, outlineStyle: 'none' },
-  scanBtn:      { padding: 4 },
 
   // Search
   searchBox:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.card, borderRadius: Radius.lg, paddingHorizontal: Spacing.md, height: 46 },
@@ -472,15 +587,12 @@ const styles = StyleSheet.create({
   typeChipTxtOn: { color: Colors.primary },
   discInput:     { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: FontSize.md, color: Colors.text, outlineStyle: 'none' },
 
-  // Payment multi-chip
-  payRow:     { flexDirection: 'row', gap: Spacing.sm },
-  payChip:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.card },
-  payChipOn:  { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  payTxt:     { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
-  payTxtOn:   { color: Colors.white },
-  payBadgeRow:{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' },
-  payBadge:   { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 3 },
-  payBadgeTxt:{ fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
+  // Payment
+  payRow:      { flexDirection: 'row', gap: Spacing.sm },
+  payChip:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.card },
+  payChipOn:   { backgroundColor: '#5C2D0E', borderColor: '#5C2D0E' },
+  payTxt:      { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
+  payTxtOn:    { color: Colors.white },
 
   // Bill
   bill:         { backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing.lg },
@@ -490,28 +602,40 @@ const styles = StyleSheet.create({
   billVal:      { fontSize: FontSize.sm, fontWeight: '600', color: Colors.text },
   billDivider:  { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.sm },
   billTotalLbl: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.text },
-  billTotalVal: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.primary },
-  payBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3 },
-  payBadgeTxt:  { fontSize: FontSize.sm, fontWeight: '700', color: Colors.primary },
+  billTotalVal: { fontSize: FontSize.xl, fontWeight: '800', color: '#5C2D0E' },
+  payBadgeRow:  { flexDirection: 'row', gap: 4, flexWrap: 'wrap' },
+  payBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 3 },
+  payBadgeTxt:  { fontSize: FontSize.xs, fontWeight: '700', color: Colors.primary },
 
-  // Complete
-  completeBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, backgroundColor: Colors.success, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing.lg },
-  completeBtnOff: { backgroundColor: Colors.border },
-  completeTxt:    { color: Colors.white, fontSize: FontSize.lg, fontWeight: '700' },
+  // Action buttons row
+  actionBtns:   { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
+  payLaterBtn:  { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: Colors.warningLight, borderRadius: Radius.md, paddingVertical: Spacing.md, borderWidth: 1.5, borderColor: '#5C2D0E' },
+  payLaterTxt:  { color: '#5C2D0E', fontSize: FontSize.sm, fontWeight: '700' },
+  completeBtn:  { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#5C2D0E', borderRadius: Radius.md, paddingVertical: Spacing.md },
+  completeTxt:  { color: Colors.white, fontSize: FontSize.sm, fontWeight: '700' },
+  btnDisabled:  { opacity: 0.4 },
 
-  // Modal
-  modalBg:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
-  modalBox:    { backgroundColor: Colors.card, borderRadius: Radius.xl, padding: Spacing.xxl, alignItems: 'center', width: '100%', maxWidth: 340 },
-  successIcon: { width: 80, height: 80, borderRadius: Radius.full, backgroundColor: Colors.successLight, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
-  modalTitle:  { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.text },
-  modalAmt:    { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.success, marginTop: Spacing.sm },
-  modalPayBox: { alignSelf: 'stretch', backgroundColor: Colors.background, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md },
-  modalPayRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  modalPayLbl: { flex: 1, fontSize: FontSize.sm, color: Colors.text },
-  modalPayVal: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.text },
-  printRow:    { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
-  printBtn:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl },
-  printTxt:    { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
-  newSaleBtn:  { backgroundColor: Colors.success, borderRadius: Radius.lg, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md },
-  newSaleTxt:  { color: Colors.white, fontSize: FontSize.md, fontWeight: '700' },
+  // Modals
+  modalBg:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  modalBox:     { backgroundColor: Colors.card, borderRadius: Radius.xl, padding: Spacing.xxl, alignItems: 'center', width: '100%', maxWidth: 340 },
+  successIcon:  { width: 80, height: 80, borderRadius: Radius.full, backgroundColor: Colors.successLight, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg },
+  modalTitle:   { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.text },
+  modalAmt:     { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.success, marginTop: Spacing.sm },
+  modalSub:     { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: 4, marginBottom: Spacing.md },
+  modalBtns:    { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md, width: '100%' },
+  printBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#5C2D0E', borderRadius: Radius.md, paddingVertical: Spacing.md },
+  printTxt:     { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
+  cancelBtn:    { flex: 1, backgroundColor: Colors.white, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', borderWidth: 1.5, borderColor: '#5C2D0E' },
+  cancelTxt:    { color: '#5C2D0E', fontSize: FontSize.sm, fontWeight: '700' },
+
+  // Pay Later modal
+  payLaterBox:    { backgroundColor: Colors.card, borderRadius: Radius.xl, padding: Spacing.xl, width: '100%', maxWidth: 400 },
+  payLaterHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.lg },
+  payLaterIconWrap:{ width: 44, height: 44, borderRadius: Radius.full, backgroundColor: Colors.warningLight, alignItems: 'center', justifyContent: 'center' },
+  payLaterTitle:  { fontSize: FontSize.lg, fontWeight: '800', color: Colors.text },
+  payLaterAmount: { fontSize: FontSize.sm, color: Colors.textMuted },
+  fieldLbl:       { fontSize: FontSize.sm, fontWeight: '600', color: Colors.text, marginBottom: 6, marginTop: Spacing.md },
+  fieldInput:     { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: FontSize.md, color: Colors.text, backgroundColor: Colors.background, outlineStyle: 'none' },
+  confirmBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#5C2D0E', borderRadius: Radius.md, paddingVertical: Spacing.md },
+  confirmTxt:     { color: Colors.white, fontSize: FontSize.sm, fontWeight: '700' },
 });

@@ -40,4 +40,10 @@ export const createExpense = (data)        => api.post('/expenses', data);
 export const getExpenses   = (params = {}) => api.get('/expenses', { params });
 export const deleteExpense = (id)          => api.delete(`/expenses/${id}`);
 
+// ── CREDITS ───────────────────────────────────────────────────────────────────
+export const getCredits   = (params = {}) => api.get('/credits', { params });
+export const createCredit = (data)        => api.post('/credits', data);
+export const markCreditPaid = (id)        => api.patch(`/credits/${id}/paid`);
+export const deleteCredit = (id)          => api.delete(`/credits/${id}`);
+
 export default api;
