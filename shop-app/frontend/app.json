@@ -1,34 +1,36 @@
 {
   "expo": {
-    "name": "Lavanya Shop",
+    "name": "Shop Manager",
     "slug": "lavanya-shop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6C3FC5"
+      "backgroundColor": "#5C2D0E"
     },
     "web": {
-      "favicon": "./assets/icon.png",
-      "bundler": "metro",
-      "name": "Lavanya Shop",
-      "shortName": "LavanyaShop",
-      "description": "Slipper & Perfume Shop Management",
-      "themeColor": "#6C3FC5",
-      "backgroundColor": "#F7F6FB"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lavanya.shop"
+      "bundleIdentifier": "com.shop.manager"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#6C3FC5"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#5C2D0E"
       },
-      "package": "com.lavanya.shop"
+      "package": "com.shop.manager"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "c1f777bc-d527-48c4-b231-fec994489be3"
+      }
+    }
   }
 }

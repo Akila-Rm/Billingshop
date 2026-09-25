@@ -72,7 +72,6 @@ export default function AddProductScreen() {
     if (!name.trim())                                                    e.name = 'Product name is required';
     if (!purchasePrice || isNaN(+purchasePrice) || +purchasePrice <= 0) e.purchasePrice = 'Enter a valid purchase price';
     if (!sell || isNaN(+sell) || +sell <= 0)                            e.sell = 'Enter a valid selling price';
-    if (msp && +sell < +msp)                                            e.sell = `Selling price must be ≥ MSP (₹${msp})`;
     if (!stock || isNaN(+stock) || parseInt(stock, 10) < 0)             e.stock = 'Enter valid stock quantity (0 or more)';
     return e;
   };
@@ -200,7 +199,7 @@ export default function AddProductScreen() {
           <Text style={styles.sectionTitle}>Pricing</Text>
         </View>
 
-        {/* Purchase Price + MRP */}
+        {/* Purchase Price + Selling Price */}
         <View style={styles.twoCol}>
           <View style={{ flex: 1 }}>
             <Field label="Purchase Price (₹)" required error={errors.purchasePrice} hint="What you paid">
@@ -224,38 +223,24 @@ export default function AddProductScreen() {
           </View>
         </View>
 
-        {/* MSP + Selling Price */}
-        <View style={styles.twoCol}>
-          <View style={{ flex: 1 }}>
-            <Field label="MSP (₹)" hint="Min selling price">
-              <TextInput
-                style={styles.input} value={msp} onChangeText={setMsp}
-                keyboardType="decimal-pad" placeholder="0.00"
-                placeholderTextColor={Colors.textMuted}
-              />
-            </Field>
-          </View>
-          <View style={{ width: Spacing.md }} />
-          <View style={{ flex: 1 }}>
-            <Field label="Selling Price (₹)" required error={errors.sell}>
-              <TextInput
-                style={[styles.input, errors.sell && styles.inputErr]}
-                value={sell} onChangeText={setSell}
-                keyboardType="decimal-pad" placeholder="0.00"
-                placeholderTextColor={Colors.textMuted}
-              />
-            </Field>
-          </View>
-        </View>
+        <Field label="Selling Price (₹)" required error={errors.sell}>
+          <TextInput
+            style={[styles.input, errors.sell && styles.inputErr]}
+            value={sell} onChangeText={setSell}
+            keyboardType="decimal-pad" placeholder="0.00"
+            placeholderTextColor={Colors.textMuted}
+          />
+        </Field>
 
         {/* Margin preview */}
         {margin && (
           <View style={styles.marginBox}>
             <Ionicons name="analytics-outline" size={15} color={Colors.primary} />
             <Text style={styles.marginTxt}>
-              Margin: <Text style={{ color: Colors.success, fontWeight: '700' }}>₹{margin.val} ({margin.pct}%)</Text>
-              {msp ? <Text style={{ color: Colors.warning }}>  MSP: ₹{msp}</Text> : null}
-              {mrp ? <Text style={{ color: Colors.info }}>  MRP: ₹{mrp}</Text> : null}
+              Profit per item:{' '}
+              <Text style={{ color: Colors.success, fontWeight: '700' }}>
+                ₹{margin.val} ({margin.pct}% margin)
+              </Text>
             </Text>
           </View>
         )}
@@ -307,7 +292,7 @@ export default function AddProductScreen() {
           disabled={loading}
         >
           <Ionicons name={isEdit ? 'save-outline' : 'add-circle-outline'} size={20} color={Colors.white} />
-          <Text style={styles.saveTxt}>{loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Product'}</Text>
+          <Text style={styles.saveTxt}>{loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Save Product'}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

@@ -12,7 +12,7 @@ const fmt = (n) => '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumF
 
 export default function CreditsScreen() {
   const [credits,    setCredits]   = useState([]);
-  const [filter,     setFilter]    = useState('pending'); // 'pending' | 'paid' | 'all'
+  const [filter,     setFilter]    = useState('pending');
   const [refreshing, setRefreshing]= useState(false);
 
   const load = useCallback(async () => {
@@ -29,88 +29,88 @@ export default function CreditsScreen() {
     .filter(c => !c.is_paid)
     .reduce((s, c) => s + parseFloat(c.amount), 0);
 
-  const handleMarkPaid = (credit) => {
-    Alert.alert(
-      'Mark as Paid',
-      `Mark ${fmt(credit.amount)} from "${credit.customer_name}" as paid?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mark Paid', onPress: async () => {
-            try {
-              await markCreditPaid(credit.id);
-              await load();
-            } catch (e) { Alert.alert('Error', e.message); }
-          },
-        },
-      ]
+  const handleMarkPaid = async (credit) => {
+    const confirmed = window.confirm(
+      `Mark ₹${credit.amount} from "${credit.customer_name}" as paid?`
     );
+    if (!confirmed) return;
+    try {
+      await markCreditPaid(credit.id);
+      await load();
+    } catch (e) {
+      window.alert('Error: ' + e.message);
+    }
   };
 
-  const handleDelete = (credit) => {
-    Alert.alert(
-      'Delete',
-      `Delete credit of ${fmt(credit.amount)} for "${credit.customer_name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive', onPress: async () => {
-            try {
-              await deleteCredit(credit.id);
-              setCredits(prev => prev.filter(c => c.id !== credit.id));
-            } catch (e) { Alert.alert('Error', e.message); }
-          },
-        },
-      ]
+  const handleDelete = async (credit) => {
+    const confirmed = window.confirm(
+      `Delete credit of ₹${credit.amount} for "${credit.customer_name}"?`
     );
+    if (!confirmed) return;
+    try {
+      await deleteCredit(credit.id);
+      setCredits(prev => prev.filter(c => c.id !== credit.id));
+    } catch (e) {
+      window.alert('Error: ' + e.message);
+    }
   };
 
   const renderItem = ({ item }) => (
-    <View style={[styles.card, Shadow.small, item.is_paid && styles.cardPaid]}>
-      {/* Left: avatar */}
-      <View style={[styles.avatar, { backgroundColor: item.is_paid ? Colors.successLight : Colors.warningLight }]}>
-        <Text style={styles.avatarTxt}>
-          {item.customer_name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
+    <View style={[styles.card, Shadow.small]}>
+      {/* Top: avatar + info + amount */}
+      <View style={styles.cardTop}>
+        <View style={[styles.avatar, {
+          backgroundColor: item.is_paid ? Colors.successLight : Colors.warningLight,
+        }]}>
+          <Text style={styles.avatarTxt}>{item.customer_name.charAt(0).toUpperCase()}</Text>
+        </View>
 
-      {/* Middle: details */}
-      <View style={{ flex: 1 }}>
-        <Text style={styles.custName}>{item.customer_name}</Text>
-        {item.phone ? (
-          <View style={styles.phoneRow}>
-            <Ionicons name="call-outline" size={12} color={Colors.textMuted} />
-            <Text style={styles.phone}>{item.phone}</Text>
-          </View>
-        ) : null}
-        {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
-        <Text style={styles.date}>
-          {new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </Text>
-        {item.is_paid && item.paid_at ? (
-          <Text style={styles.paidDate}>
-            ✅ Paid on {new Date(item.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.custName}>{item.customer_name}</Text>
+          {item.phone ? (
+            <View style={styles.phoneRow}>
+              <Ionicons name="call-outline" size={12} color={Colors.textMuted} />
+              <Text style={styles.phone}>{item.phone}</Text>
+            </View>
+          ) : null}
+          {item.note ? <Text style={styles.note}>📝 {item.note}</Text> : null}
+          <Text style={styles.date}>
+            {new Date(item.created_at).toLocaleDateString('en-IN', {
+              day: 'numeric', month: 'short', year: 'numeric',
+            })}
           </Text>
-        ) : null}
-      </View>
+          {item.is_paid && item.paid_at ? (
+            <Text style={styles.paidDate}>
+              ✅ Paid on {new Date(item.paid_at).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short',
+              })}
+            </Text>
+          ) : null}
+        </View>
 
-      {/* Right: amount + actions */}
-      <View style={styles.right}>
         <Text style={[styles.amount, { color: item.is_paid ? Colors.success : Colors.danger }]}>
           {fmt(item.amount)}
         </Text>
+      </View>
+
+      {/* Bottom: action buttons */}
+      <View style={styles.cardBtns}>
         {!item.is_paid ? (
-          <TouchableOpacity style={styles.paidBtn} onPress={() => handleMarkPaid(item)}>
-            <Ionicons name="checkmark-circle-outline" size={13} color={Colors.white} />
-            <Text style={styles.paidBtnTxt}>Paid</Text>
+          <TouchableOpacity
+            style={styles.markPaidBtn}
+            onPress={() => handleMarkPaid(item)}
+          >
+            <Ionicons name="checkmark-circle" size={16} color={Colors.white} />
+            <Text style={styles.markPaidTxt}>Mark as Paid</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.doneBadge}>
-            <Text style={styles.doneTxt}>Paid ✓</Text>
+            <Text style={styles.doneTxt}>✅ Paid</Text>
           </View>
         )}
         <TouchableOpacity style={styles.delBtn} onPress={() => handleDelete(item)}>
-          <Ionicons name="trash-outline" size={14} color={Colors.danger} />
+          <Ionicons name="trash-outline" size={15} color={Colors.danger} />
+          <Text style={styles.delTxt}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -120,11 +120,11 @@ export default function CreditsScreen() {
     <View style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Credits / Udhari</Text>
+        <Text style={styles.headerTitle}>Credits</Text>
       </View>
 
-      {/* Pending total banner */}
-      {filter !== 'paid' && totalPending > 0 && (
+      {/* Total pending banner */}
+      {totalPending > 0 && filter !== 'paid' && (
         <View style={styles.totalBanner}>
           <Ionicons name="time-outline" size={18} color={Colors.danger} />
           <Text style={styles.totalLbl}>Total Pending</Text>
@@ -144,7 +144,9 @@ export default function CreditsScreen() {
             style={[styles.filterChip, filter === f.key && styles.filterChipOn]}
             onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterTxt, filter === f.key && styles.filterTxtOn]}>{f.label}</Text>
+            <Text style={[styles.filterTxt, filter === f.key && styles.filterTxtOn]}>
+              {f.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -155,15 +157,18 @@ export default function CreditsScreen() {
         keyExtractor={item => String(item.id)}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#5C2D0E']} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#5C2D0E']} />
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="time-outline" size={56} color={Colors.border} />
             <Text style={styles.emptyTitle}>
-              {filter === 'pending' ? 'No pending credits' : filter === 'paid' ? 'No paid credits yet' : 'No credits yet'}
+              {filter === 'pending' ? 'No pending credits' :
+               filter === 'paid'    ? 'No paid credits yet' : 'No credits yet'}
             </Text>
             <Text style={styles.emptySub}>
-              {filter === 'pending' ? 'All payments are cleared!' : 'Credits will appear here'}
+              {filter === 'pending' ? 'All payments are cleared! 🎉' : 'Credits will appear here'}
             </Text>
           </View>
         }
@@ -177,38 +182,55 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#5C2D0E', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
   headerTitle: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '800' },
 
-  totalBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.dangerLight, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  totalLbl:    { flex: 1, fontSize: FontSize.sm, fontWeight: '600', color: Colors.danger },
-  totalVal:    { fontSize: FontSize.lg, fontWeight: '800', color: Colors.danger },
+  totalBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.dangerLight,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+  },
+  totalLbl: { flex: 1, fontSize: FontSize.sm, fontWeight: '600', color: Colors.danger },
+  totalVal: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.danger },
 
-  filterRow:    { flexDirection: 'row', padding: Spacing.lg, gap: Spacing.sm, backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  filterRow: {
+    flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
   filterChip:   { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.full, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   filterChipOn: { backgroundColor: '#5C2D0E', borderColor: '#5C2D0E' },
   filterTxt:    { fontSize: FontSize.xs, fontWeight: '700', color: Colors.textSecondary },
   filterTxtOn:  { color: Colors.white },
 
-  list: { padding: Spacing.lg, paddingBottom: 32 },
+  list: { padding: Spacing.lg, paddingBottom: 40 },
 
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.sm },
-  cardPaid: { opacity: 0.7 },
+  card:    { backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginBottom: Spacing.md },
 
   avatar:    { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { fontSize: FontSize.xl, fontWeight: '800', color: '#5C2D0E' },
 
-  custName:  { fontSize: FontSize.md, fontWeight: '700', color: Colors.text },
-  phoneRow:  { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  phone:     { fontSize: FontSize.xs, color: Colors.textMuted },
-  note:      { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 1, fontStyle: 'italic' },
-  date:      { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2 },
-  paidDate:  { fontSize: FontSize.xs, color: Colors.success, marginTop: 2 },
+  custName: { fontSize: FontSize.md, fontWeight: '700', color: Colors.text },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  phone:    { fontSize: FontSize.xs, color: Colors.textMuted },
+  note:     { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2, fontStyle: 'italic' },
+  date:     { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2 },
+  paidDate: { fontSize: FontSize.xs, color: Colors.success, marginTop: 2 },
+  amount:   { fontSize: FontSize.xl, fontWeight: '800' },
 
-  right:    { alignItems: 'flex-end', gap: 4 },
-  amount:   { fontSize: FontSize.lg, fontWeight: '800' },
-  paidBtn:  { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.success, borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 3 },
-  paidBtnTxt:{ fontSize: FontSize.xs, fontWeight: '700', color: Colors.white },
-  doneBadge:{ backgroundColor: Colors.successLight, borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 3 },
-  doneTxt:  { fontSize: FontSize.xs, fontWeight: '700', color: Colors.success },
-  delBtn:   { width: 28, height: 28, borderRadius: Radius.full, backgroundColor: Colors.dangerLight, alignItems: 'center', justifyContent: 'center' },
+  cardBtns:    { flexDirection: 'row', gap: Spacing.sm },
+  markPaidBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: '#5C2D0E',
+    borderRadius: Radius.md, paddingVertical: Spacing.md,
+  },
+  markPaidTxt: { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
+  doneBadge:   { flex: 1, backgroundColor: Colors.successLight, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  doneTxt:     { color: Colors.success, fontWeight: '700', fontSize: FontSize.sm },
+  delBtn:      {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, backgroundColor: Colors.dangerLight,
+    borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg,
+  },
+  delTxt: { color: Colors.danger, fontWeight: '700', fontSize: FontSize.sm },
 
   empty:      { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { fontSize: FontSize.lg, fontWeight: '600', color: Colors.textSecondary, marginTop: Spacing.md },
